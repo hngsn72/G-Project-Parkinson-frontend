@@ -1,0 +1,10 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Install framer-motion for animation",
+			"type": "shell",
+			"command": "pnpm add framer-motion"
+		}
+	]
+}
