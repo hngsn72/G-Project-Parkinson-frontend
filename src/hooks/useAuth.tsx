@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('auth_user');
     }
-    router.push('/auth/login');
+    router.push('/signin');
   };
 
   return (
