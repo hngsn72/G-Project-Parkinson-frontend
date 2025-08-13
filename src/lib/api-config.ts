@@ -17,6 +17,12 @@ export const API_ENDPOINTS = {
     historyById: (id: string) => `/api/v1/history/${id}`,
     deleteHistory: (id: string) => `/api/v1/history/${id}`,
     stats: '/api/v1/stats',
+    // Auth endpoints
+    register: '/api/v1/auth/register',
+    login: '/api/v1/auth/login',
+    logout: '/api/v1/auth/logout',
+    refresh: '/api/v1/auth/refresh',
+    profile: '/api/v1/user/profile',
   },
   
   // Legacy diagnosis endpoints (for compatibility)
@@ -73,11 +79,11 @@ export interface VoiceFeatures {
   shimmer_apq5: number;
   mdvp_apq: number;
   shimmer_dda: number;
-  
+
   // Noise measures
   nhr: number;
   hnr: number;
-  
+
   // Nonlinear measures
   rpde: number;
   dfa: number;
@@ -85,11 +91,15 @@ export interface VoiceFeatures {
   spread2: number;
   d2: number;
   ppe: number;
-  
+
   // Engineered features
-  jitter_shimmer_ratio: number;
-  harmonic_noise_combined: number;
-  voice_stability_index: number;
+  fo_range?: number;
+  jitter_mean?: number;
+  shimmer_mean?: number;
+  // Các trường cũ giữ lại để tránh lỗi FE nếu backend chưa trả về
+  jitter_shimmer_ratio?: number;
+  harmonic_noise_combined?: number;
+  voice_stability_index?: number;
 }
 
 export interface AnalysisMetadata {

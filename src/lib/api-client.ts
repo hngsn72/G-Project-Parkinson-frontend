@@ -1,4 +1,11 @@
 import { API_CONFIG, ApiResponse } from './api-config';
+// Only import dynamically to avoid SSR issues
+function getAccessTokenSafe(): string | null {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage.getItem('access_token');
+  }
+  return null;
+}
 
 class ApiClient {
   private baseURL: string;
@@ -19,13 +26,21 @@ class ApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
+      // Add Authorization header if access token exists and not already set
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string> ?? {}),
+      };
+      if (typeof window !== 'undefined') {
+        const token = getAccessTokenSafe();
+        if (token && !headers['Authorization']) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
       });
 
       clearTimeout(timeoutId);

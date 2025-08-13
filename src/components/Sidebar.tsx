@@ -16,7 +16,7 @@ import {
 const navigationItems = [
   {
     title: 'Dashboard',
-    href: '/',
+    href: '/dashboard',
     icon: Home,
     description: 'Overview & Analytics'
   },
@@ -62,7 +62,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
+    if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
   };
 

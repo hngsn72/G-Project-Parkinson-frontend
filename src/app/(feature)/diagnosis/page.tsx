@@ -40,6 +40,7 @@ export default function VoiceAnalysis() {
   } = useSentences();
 
   const handleStartRecording = async () => {
+    await fetchRandomSentence();
     await startRecording();
   };
 
@@ -97,6 +98,7 @@ export default function VoiceAnalysis() {
             <div className="p-8">
               {/* Recording Interface */}
               <div className="text-center space-y-6">
+
                 {/* Recording Visualizer */}
                 <div className="relative">
                   <div className={`w-32 h-32 mx-auto rounded-full border-4 flex items-center justify-center transition-all duration-300 ${
@@ -121,7 +123,6 @@ export default function VoiceAnalysis() {
                       <Mic className="h-12 w-12 text-gray-400" />
                     )}
                   </div>
-                  
                   {/* Recording Time */}
                   {isRecording && (
                     <div className="mt-4">
@@ -131,20 +132,36 @@ export default function VoiceAnalysis() {
                       <div className="text-sm text-gray-500">Recording...</div>
                     </div>
                   )}
-                  
                   {isAnalyzing && (
                     <div className="mt-4">
                       <div className="text-lg font-semibold text-blue-600">Analyzing Voice Pattern</div>
                       <div className="text-sm text-gray-500">AI processing in progress...</div>
                     </div>
                   )}
-
                   {error && (
                     <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <div className="text-sm text-red-800">{error}</div>
                     </div>
                   )}
                 </div>
+
+                {/* Sentence to read - always show in recording card if not analyzing and (not result or isRecording) */}
+                {(!isAnalyzing && (isRecording || !result) && sentence) && (
+                  <div className="mb-2 flex flex-col items-center">
+                    <span className="text-blue-800 text-sm font-medium mb-1">Please read this sentence:</span>
+                    <div className={`bg-white p-3 rounded border border-blue-200 w-fit max-w-full ${isRecording ? 'ring-2 ring-blue-400' : ''}`}>
+                      <span className="text-gray-900 font-medium">&quot;{sentence.sentence}&quot;</span>
+                    </div>
+                    {!isRecording && (
+                      <button 
+                        onClick={fetchRandomSentence}
+                        className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                      >
+                        Get different sentence
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Control Buttons */}
                 <div className="flex justify-center space-x-4">
@@ -195,23 +212,9 @@ export default function VoiceAnalysis() {
                 </div>
 
                 {/* Instructions */}
-                {!isRecording && !isAnalyzing && !result && (
+                {(!isAnalyzing && !result) && (
                   <div className="bg-blue-50 rounded-lg p-4">
                     <h3 className="font-medium text-blue-900 mb-2">Recording Instructions</h3>
-                    {sentence ? (
-                      <div className="mb-3">
-                        <p className="text-sm text-blue-800 font-medium mb-1">Please read this sentence:</p>
-                        <div className="bg-white p-3 rounded border border-blue-200">
-                          <p className="text-gray-900 font-medium">&quot;{sentence.sentence}&quot;</p>
-                        </div>
-                        <button 
-                          onClick={fetchRandomSentence}
-                          className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-                        >
-                          Get different sentence
-                        </button>
-                      </div>
-                    ) : null}
                     <ul className="text-sm text-blue-800 space-y-1">
                       <li>• Speak clearly into your microphone</li>
                       <li>• Record for at least 10-15 seconds</li>
@@ -233,7 +236,6 @@ export default function VoiceAnalysis() {
                   Analysis Results
                 </h3>
               </div>
-              
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                   {/* Risk Assessment */}
@@ -243,7 +245,6 @@ export default function VoiceAnalysis() {
                     <div className="text-2xl font-bold">{result.risk_level}</div>
                     <div className="text-xs">{result.prediction === 'parkinsons' ? 'Positive indicators' : 'Normal patterns'}</div>
                   </div>
-                  
                   {/* Confidence Score */}
                   <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <Zap className="h-8 w-8 text-blue-600 mx-auto mb-2" />
@@ -251,7 +252,6 @@ export default function VoiceAnalysis() {
                     <div className="text-2xl font-bold text-blue-900">{Math.round(result.confidence * 100)}%</div>
                     <div className="text-xs text-blue-700">Analysis accuracy</div>
                   </div>
-                  
                   {/* Processing Time */}
                   <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                     <Clock className="h-8 w-8 text-green-600 mx-auto mb-2" />
@@ -261,10 +261,81 @@ export default function VoiceAnalysis() {
                   </div>
                 </div>
 
+                {/* Bảng chỉ số âm học */}
+                <div className="mb-6">
+                  <h4 className="font-semibold text-gray-900 mb-2">Acoustic Feature Table</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm border rounded-lg">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="px-3 py-2 border">Feature</th>
+                          <th className="px-3 py-2 border">Value</th>
+                          <th className="px-3 py-2 border">Unit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const features = result.features || {};
+                          const featureList = [
+                            { key: 'MDVP:Fo(Hz)', value: features.mdvp_fo_hz, unit: 'Hz' },
+                            { key: 'MDVP:Fhi(Hz)', value: features.mdvp_fhi_hz, unit: 'Hz' },
+                            { key: 'MDVP:Flo(Hz)', value: features.mdvp_flo_hz, unit: 'Hz' },
+                            { key: 'MDVP:Jitter(%)', value: features.mdvp_jitter_percent, unit: '%' },
+                            { key: 'MDVP:Jitter(Abs)', value: features.mdvp_jitter_abs, unit: '' },
+                            { key: 'MDVP:RAP', value: features.mdvp_rap, unit: '' },
+                            { key: 'MDVP:PPQ', value: features.mdvp_ppq, unit: '' },
+                            { key: 'Jitter:DDP', value: features.jitter_ddp, unit: '' },
+                            { key: 'MDVP:Shimmer', value: features.mdvp_shimmer, unit: '' },
+                            { key: 'MDVP:Shimmer(dB)', value: features.mdvp_shimmer_db, unit: 'dB' },
+                            { key: 'Shimmer:APQ3', value: features.shimmer_apq3, unit: '' },
+                            { key: 'Shimmer:APQ5', value: features.shimmer_apq5, unit: '' },
+                            { key: 'MDVP:APQ', value: features.mdvp_apq, unit: '' },
+                            { key: 'Shimmer:DDA', value: features.shimmer_dda, unit: '' },
+                            { key: 'HNR', value: features.hnr, unit: 'dB' },
+                            { key: 'NHR', value: features.nhr, unit: '' },
+                            { key: 'RPDE', value: features.rpde, unit: '' },
+                            { key: 'DFA', value: features.dfa, unit: '' },
+                            { key: 'spread1', value: features.spread1, unit: '' },
+                            { key: 'spread2', value: features.spread2, unit: '' },
+                            { key: 'D2', value: features.d2, unit: '' },
+                            { key: 'PPE', value: features.ppe, unit: '' },
+                            { key: 'Fo_range', value: features.fo_range, unit: 'Hz' },
+                            { key: 'Jitter_mean', value: features.jitter_mean, unit: '' },
+                            { key: 'Shimmer_mean', value: features.shimmer_mean, unit: '' },
+                          ];
+                          return featureList.map(row => (
+                            <tr key={row.key}>
+                              <td className="px-3 py-2 border font-medium">{row.key}</td>
+                              <td className="px-3 py-2 border">{row.value !== undefined ? row.value : '-'}</td>
+                              <td className="px-3 py-2 border text-gray-500">{row.unit}</td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                  {/* Cảnh báo tổng hợp */}
+                  {(() => {
+                    const features = result.features || {};
+                    const warnings = [];
+                    if (features.mdvp_fo_hz < 40) warnings.push('F0 dao động thấp, giọng đơn điệu hoặc nghi ngờ bệnh.');
+                    if (features.mdvp_jitter_percent > 0.6) warnings.push('Jitter cao, có thể rối loạn phát âm.');
+                    if (features.mdvp_shimmer_db > 0.35) warnings.push('Shimmer cao, bất thường về cường độ.');
+                    if (features.hnr < 15) warnings.push('HNR thấp, tín hiệu nhiễu nhiều.');
+                    return warnings.length > 0 ? (
+                      <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-800">
+                        <div className="font-semibold mb-1">Cảnh báo bất thường:</div>
+                        <ul className="list-disc pl-5">
+                          {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                        </ul>
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
+
                 {/* Detailed Information */}
                 <div className="space-y-4">
                   <h4 className="font-semibold text-gray-900">Analysis Details</h4>
-                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Prediction</div>
@@ -272,19 +343,16 @@ export default function VoiceAnalysis() {
                         {result.prediction === 'parkinsons' ? 'Parkinson\'s Indicators Detected' : 'Normal Voice Patterns'}
                       </div>
                     </div>
-                    
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Analysis ID</div>
                       <div className="text-lg font-mono text-gray-900">{result.id}</div>
                     </div>
-                    
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Timestamp</div>
                       <div className="text-lg text-gray-900">
                         {new Date(result.created_at).toLocaleString()}
                       </div>
                     </div>
-                    
                     {result.analysis_metadata && (
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <div className="text-sm font-medium text-gray-700 mb-2">Model Version</div>

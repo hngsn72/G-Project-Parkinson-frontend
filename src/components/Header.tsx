@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Search, 
   Bell, 
@@ -19,6 +20,7 @@ export default function Header() {
   const [searchValue, setSearchValue] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm relative z-10">
@@ -117,8 +119,8 @@ export default function Header() {
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className="text-sm font-medium text-gray-900">Dr. John Smith</p>
-                  <p className="text-xs text-gray-500">Medical Specialist</p>
+                  <p className="text-sm font-medium text-gray-900">{user?.display_name || 'Chưa đăng nhập'}</p>
+                  <p className="text-xs text-gray-500">{user?.email || ''}</p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               </button>
@@ -127,8 +129,8 @@ export default function Header() {
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1">
                   <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">Dr. John Smith</p>
-                    <p className="text-xs text-gray-500">john.smith@hospital.com</p>
+                    <p className="text-sm font-medium text-gray-900">{user?.display_name || 'Chưa đăng nhập'}</p>
+                    <p className="text-xs text-gray-500">{user?.email || ''}</p>
                   </div>
                   
                   <button className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
@@ -147,7 +149,7 @@ export default function Header() {
                   </button>
                   
                   <div className="border-t border-gray-100 mt-1">
-                    <button className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <button onClick={logout} className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                       <LogOut className="h-4 w-4 mr-3" />
                       Sign Out
                     </button>
