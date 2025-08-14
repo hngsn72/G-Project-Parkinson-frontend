@@ -132,12 +132,13 @@ export interface DiagnosisHistory {
   session_id: string;
   timestamp: string;
   created_at: string;
-  prediction: 'Healthy' | 'Parkinsons';
-  confidence: number;
+  prediction: 'Healthy' | 'Parkinsons' | number;
+  confidence: number | string;
   audio_duration: number;
-  sentence_used: string;
+  sentence_used?: string;
+  sentence?: string;
   risk_level: 'low' | 'moderate' | 'high';
-  features?: VoiceFeatures; // <-- add this line to support features in history
+  features?: VoiceFeatures;
 }
 
 export interface StatsResponse {

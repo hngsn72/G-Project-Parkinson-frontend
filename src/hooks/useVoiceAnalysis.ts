@@ -126,7 +126,7 @@ export function useAnalysisHistory() {
     setError(null);
 
     try {
-      const response = await VoiceAnalysisService.getAnalysisHistory();
+      const response = await VoiceAnalysisService.getAnalysisHistory(10);
       
       if (response.success && response.data) {
         setHistory(response.data);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAnalysisHistory } from '@/hooks';
+import { DiagnosisHistory } from '@/lib/api-config';
 import { 
   Search, 
   Filter,
@@ -22,6 +23,7 @@ export default function AnalysisHistory() {
   const [filterPeriod, setFilterPeriod] = useState('all');
 
   const { history, isLoading, error, fetchHistory, deleteAnalysis } = useAnalysisHistory();
+  console.log('history:', history);
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this analysis?')) {
@@ -44,10 +46,19 @@ export default function AnalysisHistory() {
       <CheckCircle className="h-4 w-4 text-green-500" />;
   };
 
-  const filteredData = Array.isArray(history) ? history.filter(item => {
+  // Support both array and object with diagnoses array
+  const getHistoryArray = (history: unknown): DiagnosisHistory[] => {
+    if (Array.isArray(history)) return history as DiagnosisHistory[];
+    if (history && typeof history === 'object' && Array.isArray((history as any).diagnoses)) {
+      return (history as { diagnoses: DiagnosisHistory[] }).diagnoses;
+    }
+    return [];
+  };
+
+  const filteredData: DiagnosisHistory[] = getHistoryArray(history).filter((item) => {
     const matchesSearch = (item.session_id || item.id || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
-  }) : [];
+  });
 
   // Mock stats for when API is not available
   const mockStats = {
@@ -210,21 +221,23 @@ export default function AnalysisHistory() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((analysis) => (
+                filteredData.map((analysis: DiagnosisHistory) => (
                   <tr key={analysis.session_id || analysis.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap font-mono">{analysis.session_id || analysis.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap capitalize">{analysis.prediction}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{Math.round(analysis.confidence * 100)}%</td>
+                    <td className="px-6 py-4 whitespace-nowrap capitalize">
+                      {Number(analysis.prediction) === 1 ? "Parkinsons" : "Healthy"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">{analysis.confidence || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(analysis.risk_level)}`}>
-                        {analysis.risk_level}
+                        {analysis.risk_level || '-'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {new Date(analysis.timestamp || analysis.created_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{analysis.audio_duration ? `${analysis.audio_duration.toFixed(2)}s` : '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{analysis.sentence_used || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{'audio_duration' in analysis && analysis.audio_duration ? `${analysis.audio_duration.toFixed(2)}s` : '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{analysis.sentence || analysis.sentence_used || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button className="text-blue-600 hover:text-blue-800 p-1 rounded">
