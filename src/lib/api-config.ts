@@ -105,6 +105,10 @@ export interface VoiceFeatures {
   jitter?: number;
   shimmer?: number;
   f0?: number;
+
+  // Thêm xác suất dự đoán cho FE
+  probability_healthy?: number;
+  probability_parkinsons?: number;
 }
 
 export interface AnalysisMetadata {

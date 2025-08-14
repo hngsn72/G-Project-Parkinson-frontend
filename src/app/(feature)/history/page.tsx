@@ -183,14 +183,16 @@ export default function AnalysisHistory() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prediction</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk Level</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Audio Duration</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentence</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prediction</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prob. Healthy</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prob. Parkinsons</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk Level</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Audio Duration</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentence</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -221,44 +223,55 @@ export default function AnalysisHistory() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((analysis: DiagnosisHistory) => (
-                  <tr key={analysis.session_id || analysis.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap font-mono">{analysis.session_id || analysis.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap capitalize">
-                      {Number(analysis.prediction) === 1 ? "Parkinsons" : "Healthy"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{analysis.confidence || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(analysis.risk_level)}`}>
-                        {analysis.risk_level || '-'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {new Date(analysis.timestamp || analysis.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{'audio_duration' in analysis && analysis.audio_duration ? `${analysis.audio_duration.toFixed(2)}s` : '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{analysis.sentence || analysis.sentence_used || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-800 p-1 rounded">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="text-green-600 hover:text-green-800 p-1 rounded">
-                          <Download className="h-4 w-4" />
-                        </button>
-                        <button className="text-gray-600 hover:text-gray-800 p-1 rounded">
-                          <Share2 className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(analysis.session_id || analysis.id)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredData.map((analysis: DiagnosisHistory) => {
+                  // Lấy xác suất từ features nếu có, nếu không thì để '-'
+                  const probHealthy = analysis.features && typeof analysis.features.probability_healthy === 'number'
+                    ? `${(analysis.features.probability_healthy * 100).toFixed(1)}%`
+                    : '-';
+                  const probParkinsons = analysis.features && typeof analysis.features.probability_parkinsons === 'number'
+                    ? `${(analysis.features.probability_parkinsons * 100).toFixed(1)}%`
+                    : '-';
+                  return (
+                    <tr key={analysis.session_id || analysis.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap font-mono">{analysis.session_id || analysis.id}</td>
+                      <td className="px-4 py-4 whitespace-nowrap capitalize">
+                        {Number(analysis.prediction) === 1 ? "Parkinsons" : "Healthy"}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">{analysis.confidence || '-'}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">{probHealthy}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">{probParkinsons}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(analysis.risk_level)}`}>
+                          {analysis.risk_level || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {new Date(analysis.timestamp || analysis.created_at).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">{'audio_duration' in analysis && analysis.audio_duration ? `${analysis.audio_duration.toFixed(2)}s` : '-'}</td>
+                      <td className="px-4 py-4 whitespace-nowrap">{analysis.sentence || analysis.sentence_used || '-'}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center space-x-2">
+                          <button className="text-blue-600 hover:text-blue-800 p-1 rounded">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button className="text-green-600 hover:text-green-800 p-1 rounded">
+                            <Download className="h-4 w-4" />
+                          </button>
+                          <button className="text-gray-600 hover:text-gray-800 p-1 rounded">
+                            <Share2 className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(analysis.session_id || analysis.id)}
+                            className="text-red-600 hover:text-red-800 p-1 rounded"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

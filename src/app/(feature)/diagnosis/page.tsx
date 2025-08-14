@@ -388,7 +388,11 @@ export default function VoiceAnalysis() {
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Probability</div>
-                      <div className="text-lg text-gray-900">{result.probability !== undefined ? result.probability : '-'}</div>
+                      <div className="text-lg text-gray-900">
+                        {typeof result.probability === 'number'
+                          ? `${result.probability.toFixed(2)}%`
+                          : '-'}
+                      </div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Analysis ID</div>
