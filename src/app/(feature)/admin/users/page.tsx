@@ -28,8 +28,12 @@ export default function AdminUsersPage() {
         if (!res.ok) throw new Error('Không có quyền hoặc lỗi máy chủ');
         const data = await res.json();
         setUsers(data.users || []);
-      } catch (e:any) {
-        setError(e.message);
+      } catch (e) {
+        if (e instanceof Error) {
+          setError(e.message);
+        } else {
+          setError('Unknown error');
+        }
       }
     };
     load();
