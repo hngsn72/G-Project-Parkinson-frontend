@@ -26,36 +26,36 @@ const navigationItems = [
     icon: Mic,
     description: 'AI Voice Diagnosis'
   },
-  {
-    title: 'Patients',
-    href: '/patients', 
-    icon: Users,
-    description: 'Patient Management'
-  },
-  {
-    title: 'Scheduler',
-    href: '/scheduler',
-    icon: Calendar,
-    description: 'Appointments'
-  },
+  // {
+  //   title: 'Patients',
+  //   href: '/patients', 
+  //   icon: Users,
+  //   description: 'Patient Management'
+  // },
+  // {
+  //   title: 'Scheduler',
+  //   href: '/scheduler',
+  //   icon: Calendar,
+  //   description: 'Appointments'
+  // },
   {
     title: 'History',
     href: '/history',
     icon: History,
     description: 'Analysis Records'
   },
-  {
-    title: 'Reports',
-    href: '/reports',
-    icon: BarChart3,
-    description: 'Analytics & Reports'
-  },
-  {
-    title: 'Settings',
-    href: '/settings',
-    icon: Settings,
-    description: 'System Configuration'
-  }
+  // {
+  //   title: 'Reports',
+  //   href: '/reports',
+  //   icon: BarChart3,
+  //   description: 'Analytics & Reports'
+  // },
+  // {
+  //   title: 'Settings',
+  //   href: '/settings',
+  //   icon: Settings,
+  //   description: 'System Configuration'
+  // }
 ];
 
 export default function Sidebar() {

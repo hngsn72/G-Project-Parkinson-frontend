@@ -18,9 +18,9 @@ export default function SigninForm() {
     e.preventDefault();
     setError(null); setLoading(true);
     const res = await AuthService.login(email, password);
-    setLoading(false);
+      setLoading(false);
     if (!res.success) { setError(res.error || 'Đăng nhập thất bại'); return; }
-    router.push("/");
+    router.push("/dashboard");
   };
 
   return (
