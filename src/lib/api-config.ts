@@ -64,14 +64,14 @@ export interface VoiceFeatures {
   mdvp_fo_hz: number;
   mdvp_fhi_hz: number;
   mdvp_flo_hz: number;
-  
+
   // Jitter measures
   mdvp_jitter_percent: number;
   mdvp_jitter_abs: number;
   mdvp_rap: number;
   mdvp_ppq: number;
   jitter_ddp: number;
-  
+
   // Shimmer measures
   mdvp_shimmer: number;
   mdvp_shimmer_db: number;
@@ -100,6 +100,11 @@ export interface VoiceFeatures {
   jitter_shimmer_ratio?: number;
   harmonic_noise_combined?: number;
   voice_stability_index?: number;
+
+  // Các trường đồng bộ backend mới
+  jitter?: number;
+  shimmer?: number;
+  f0?: number;
 }
 
 export interface AnalysisMetadata {
@@ -132,6 +137,7 @@ export interface DiagnosisHistory {
   audio_duration: number;
   sentence_used: string;
   risk_level: 'low' | 'moderate' | 'high';
+  features?: VoiceFeatures; // <-- add this line to support features in history
 }
 
 export interface StatsResponse {

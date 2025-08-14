@@ -249,8 +249,8 @@ export default function VoiceAnalysis() {
                   <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <Zap className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                     <div className="text-sm font-medium text-blue-800">Confidence</div>
-                    <div className="text-2xl font-bold text-blue-900">{Math.round(result.confidence * 100)}%</div>
-                    <div className="text-xs text-blue-700">Analysis accuracy</div>
+                    <div className="text-2xl font-bold text-blue-900">{result.confidence}</div>
+                    <div className="text-xs text-blue-700">Analysis confidence</div>
                   </div>
                   {/* Processing Time */}
                   <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
@@ -268,46 +268,87 @@ export default function VoiceAnalysis() {
                     <table className="min-w-full text-sm border rounded-lg">
                       <thead>
                         <tr className="bg-gray-100">
-                          <th className="px-3 py-2 border">Feature</th>
-                          <th className="px-3 py-2 border">Value</th>
-                          <th className="px-3 py-2 border">Unit</th>
+                          <th className="px-3 py-2 border">Chỉ số âm học</th>
+                          <th className="px-3 py-2 border">Giá trị</th>
+                          <th className="px-3 py-2 border">Đánh giá</th>
+                          <th className="px-3 py-2 border">Ngưỡng bình thường</th>
+                          <th className="px-3 py-2 border">Giải thích</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(() => {
                           const features = result.features || {};
+                          // Định nghĩa logic đánh giá cho từng chỉ số
+                          function getJitterLevel(val: number) {
+                            if (val > 1.5) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
+                            if (val > 1.0) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
+                            if (val > 0.6) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
+                            if (val >= 0.2) return { label: 'Bình thường', color: 'text-green-600' };
+                            return { label: '-', color: '' };
+                          }
+                          function getShimmerLevel(val: number) {
+                            if (val > 0.7) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
+                            if (val > 0.5) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
+                            if (val > 0.35) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
+                            if (val >= 0.1) return { label: 'Bình thường', color: 'text-green-600' };
+                            return { label: '-', color: '' };
+                          }
+                          function getHNRLevel(val: number) {
+                            if (val < 10) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
+                            if (val < 12) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
+                            if (val < 15) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
+                            if (val >= 15 && val <= 25) return { label: 'Bình thường', color: 'text-green-600' };
+                            return { label: '-', color: '' };
+                          }
+                          function getF0Level(val: number) {
+                            if (val < 15) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
+                            if (val < 25) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
+                            if (val < 40) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
+                            if (val >= 40) return { label: 'Bình thường', color: 'text-green-600' };
+                            return { label: '-', color: '' };
+                          }
+                          // Bảng chỉ số chính - lấy đúng key từ backend
                           const featureList = [
-                            { key: 'MDVP:Fo(Hz)', value: features.mdvp_fo_hz, unit: 'Hz' },
-                            { key: 'MDVP:Fhi(Hz)', value: features.mdvp_fhi_hz, unit: 'Hz' },
-                            { key: 'MDVP:Flo(Hz)', value: features.mdvp_flo_hz, unit: 'Hz' },
-                            { key: 'MDVP:Jitter(%)', value: features.mdvp_jitter_percent, unit: '%' },
-                            { key: 'MDVP:Jitter(Abs)', value: features.mdvp_jitter_abs, unit: '' },
-                            { key: 'MDVP:RAP', value: features.mdvp_rap, unit: '' },
-                            { key: 'MDVP:PPQ', value: features.mdvp_ppq, unit: '' },
-                            { key: 'Jitter:DDP', value: features.jitter_ddp, unit: '' },
-                            { key: 'MDVP:Shimmer', value: features.mdvp_shimmer, unit: '' },
-                            { key: 'MDVP:Shimmer(dB)', value: features.mdvp_shimmer_db, unit: 'dB' },
-                            { key: 'Shimmer:APQ3', value: features.shimmer_apq3, unit: '' },
-                            { key: 'Shimmer:APQ5', value: features.shimmer_apq5, unit: '' },
-                            { key: 'MDVP:APQ', value: features.mdvp_apq, unit: '' },
-                            { key: 'Shimmer:DDA', value: features.shimmer_dda, unit: '' },
-                            { key: 'HNR', value: features.hnr, unit: 'dB' },
-                            { key: 'NHR', value: features.nhr, unit: '' },
-                            { key: 'RPDE', value: features.rpde, unit: '' },
-                            { key: 'DFA', value: features.dfa, unit: '' },
-                            { key: 'spread1', value: features.spread1, unit: '' },
-                            { key: 'spread2', value: features.spread2, unit: '' },
-                            { key: 'D2', value: features.d2, unit: '' },
-                            { key: 'PPE', value: features.ppe, unit: '' },
-                            { key: 'Fo_range', value: features.fo_range, unit: 'Hz' },
-                            { key: 'Jitter_mean', value: features.jitter_mean, unit: '' },
-                            { key: 'Shimmer_mean', value: features.shimmer_mean, unit: '' },
+                            {
+                              key: 'Jitter (%)',
+                              value: features.jitter,
+                              unit: '%',
+                              level: getJitterLevel(features.jitter),
+                              normal: '0.2 – 0.6%',
+                              explain: 'Độ dao động tần số cơ bản của giọng nói.'
+                            },
+                            {
+                              key: 'Shimmer (dB)',
+                              value: features.shimmer,
+                              unit: 'dB',
+                              level: getShimmerLevel(features.shimmer),
+                              normal: '0.1 – 0.35 dB',
+                              explain: 'Độ dao động biên độ của giọng nói.'
+                            },
+                            {
+                              key: 'HNR (dB)',
+                              value: features.hnr,
+                              unit: 'dB',
+                              level: getHNRLevel(features.hnr),
+                              normal: '15 – 25 dB',
+                              explain: 'Tỉ số tín hiệu/hệ số nhiễu.'
+                            },
+                            {
+                              key: 'F0 dao động (Hz)',
+                              value: (features.f0 ?? features.fo_range ?? features.mdvp_fo_hz) ?? '-',
+                              unit: 'Hz',
+                              level: getF0Level((features.f0 ?? features.fo_range ?? features.mdvp_fo_hz) ?? 0),
+                              normal: '≥ 40 Hz',
+                              explain: 'Độ dao động tần số cơ bản (F0) của giọng.'
+                            },
                           ];
                           return featureList.map(row => (
                             <tr key={row.key}>
                               <td className="px-3 py-2 border font-medium">{row.key}</td>
                               <td className="px-3 py-2 border">{row.value !== undefined ? row.value : '-'}</td>
-                              <td className="px-3 py-2 border text-gray-500">{row.unit}</td>
+                              <td className={`px-3 py-2 border font-semibold ${row.level?.color}`}>{row.level?.label}</td>
+                              <td className="px-3 py-2 border text-gray-500">{row.normal}</td>
+                              <td className="px-3 py-2 border text-gray-500">{row.explain}</td>
                             </tr>
                           ));
                         })()}
@@ -318,10 +359,10 @@ export default function VoiceAnalysis() {
                   {(() => {
                     const features = result.features || {};
                     const warnings = [];
-                    if (features.mdvp_fo_hz < 40) warnings.push('F0 dao động thấp, giọng đơn điệu hoặc nghi ngờ bệnh.');
-                    if (features.mdvp_jitter_percent > 0.6) warnings.push('Jitter cao, có thể rối loạn phát âm.');
-                    if (features.mdvp_shimmer_db > 0.35) warnings.push('Shimmer cao, bất thường về cường độ.');
-                    if (features.hnr < 15) warnings.push('HNR thấp, tín hiệu nhiễu nhiều.');
+                    if (features.f0 !== undefined && features.f0 < 40) warnings.push('F0 dao động thấp, giọng đơn điệu hoặc nghi ngờ bệnh.');
+                    if (features.jitter !== undefined && features.jitter > 0.6) warnings.push('Jitter cao, có thể rối loạn phát âm.');
+                    if (features.shimmer !== undefined && features.shimmer > 0.35) warnings.push('Shimmer cao, bất thường về cường độ.');
+                    if (features.hnr !== undefined && features.hnr < 15) warnings.push('HNR thấp, tín hiệu nhiễu nhiều.');
                     return warnings.length > 0 ? (
                       <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-800">
                         <div className="font-semibold mb-1">Cảnh báo bất thường:</div>
@@ -339,9 +380,15 @@ export default function VoiceAnalysis() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Prediction</div>
-                      <div className="text-lg font-semibold text-gray-900 capitalize">
-                        {result.prediction === 'parkinsons' ? 'Parkinson\'s Indicators Detected' : 'Normal Voice Patterns'}
-                      </div>
+                      <div className="text-lg font-semibold text-gray-900 capitalize">{result.prediction}</div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Diagnosis</div>
+                      <div className="text-lg text-gray-900">{result.diagnosis || '-'}</div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Probability</div>
+                      <div className="text-lg text-gray-900">{result.probability !== undefined ? result.probability : '-'}</div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Analysis ID</div>
@@ -349,14 +396,12 @@ export default function VoiceAnalysis() {
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Timestamp</div>
-                      <div className="text-lg text-gray-900">
-                        {new Date(result.created_at).toLocaleString()}
-                      </div>
+                      <div className="text-lg text-gray-900">{new Date(result.created_at).toLocaleString()}</div>
                     </div>
-                    {result.analysis_metadata && (
+                    {result.model_info && (
                       <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-sm font-medium text-gray-700 mb-2">Model Version</div>
-                        <div className="text-lg text-gray-900">{result.analysis_metadata.model_version}</div>
+                        <div className="text-sm font-medium text-gray-700 mb-2">Model Info</div>
+                        <div className="text-xs text-gray-900 whitespace-pre-wrap">{JSON.stringify(result.model_info, null, 2)}</div>
                       </div>
                     )}
                   </div>

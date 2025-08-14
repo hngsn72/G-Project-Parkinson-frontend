@@ -75,6 +75,7 @@ export function useAudioRecording() {
       const mediaRecorder = await AudioRecordingService.startRecording();
       if (mediaRecorder) {
         setIsRecording(true);
+        window.dispatchEvent(new CustomEvent('voice-analysis-history-update'));
       } else {
         setError('Failed to start recording');
       }
