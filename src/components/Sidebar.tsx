@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { 
   Home, 
   Mic, 
-  Users, 
-  Calendar, 
+  // Users, 
+  // Calendar, 
   History, 
-  Settings,
-  BarChart3,
+  // Settings,
+  // BarChart3,
   ChevronRight
 } from 'lucide-react';
 

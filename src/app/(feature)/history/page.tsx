@@ -11,7 +11,7 @@ import {
   Calendar,
   Mic,
   AlertTriangle,
-  CheckCircle,
+  // CheckCircle,
   BarChart3,
   Trash2,
   Share2
@@ -40,18 +40,20 @@ export default function AnalysisHistory() {
     }
   };
 
-  const getStatusIcon = (prediction: string) => {
-    return prediction.toLowerCase() === 'parkinsons' ? 
-      <AlertTriangle className="h-4 w-4 text-yellow-500" /> : 
-      <CheckCircle className="h-4 w-4 text-green-500" />;
-  };
+  // const getStatusIcon = (prediction: string) => {
+  //   return prediction.toLowerCase() === 'parkinsons' ? 
+  //     <AlertTriangle className="h-4 w-4 text-yellow-500" /> : 
+  //     <CheckCircle className="h-4 w-4 text-green-500" />;
+  // };
 
   // Support both array and object with diagnoses array
+  function isDiagnosesObject(obj: unknown): obj is { diagnoses: DiagnosisHistory[] } {
+    return !!obj && typeof obj === 'object' && Array.isArray((obj as { diagnoses?: unknown }).diagnoses);
+  }
+
   const getHistoryArray = (history: unknown): DiagnosisHistory[] => {
     if (Array.isArray(history)) return history as DiagnosisHistory[];
-    if (history && typeof history === 'object' && Array.isArray((history as any).diagnoses)) {
-      return (history as { diagnoses: DiagnosisHistory[] }).diagnoses;
-    }
+    if (isDiagnosesObject(history)) return history.diagnoses;
     return [];
   };
 

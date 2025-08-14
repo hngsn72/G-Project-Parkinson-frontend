@@ -197,7 +197,7 @@ export default function Dashboard() {
 													<CheckCircle className="h-4 w-4 text-green-500" />
 												</div>
 												<p className="text-sm text-gray-500 mt-1">
-													{Math.round(analysis.confidence * 100)}% confidence
+													{typeof analysis.confidence === 'number' ? Math.round(analysis.confidence * 100) : '--'}% confidence
 												</p>
 											</div>
 										</div>
