@@ -57,6 +57,11 @@ export interface DiagnosisResult {
   features: VoiceFeatures;
   analysis_metadata: AnalysisMetadata;
   created_at: string;
+  diagnosis: 'healthy' | 'parkinsons';
+  probability: number;
+  model_info: {
+    model_version: string;
+  };
 }
 
 export interface VoiceFeatures {
