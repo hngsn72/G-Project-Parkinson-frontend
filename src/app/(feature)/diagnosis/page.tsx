@@ -313,7 +313,7 @@ export default function VoiceAnalysis() {
                               key: 'Jitter (%)',
                               value: features.jitter,
                               unit: '%',
-                              level: getJitterLevel(features.jitter),
+                              level: getJitterLevel(typeof features.jitter === 'number' ? features.jitter : 0),
                               normal: '0.2 – 0.6%',
                               explain: 'Độ dao động tần số cơ bản của giọng nói.'
                             },
@@ -321,7 +321,7 @@ export default function VoiceAnalysis() {
                               key: 'Shimmer (dB)',
                               value: features.shimmer,
                               unit: 'dB',
-                              level: getShimmerLevel(features.shimmer),
+                              level: getShimmerLevel(typeof features.shimmer === 'number' ? features.shimmer : 0),
                               normal: '0.1 – 0.35 dB',
                               explain: 'Độ dao động biên độ của giọng nói.'
                             },
@@ -329,7 +329,7 @@ export default function VoiceAnalysis() {
                               key: 'HNR (dB)',
                               value: features.hnr,
                               unit: 'dB',
-                              level: getHNRLevel(features.hnr),
+                              level: getHNRLevel(typeof features.hnr === 'number' ? features.hnr : 0),
                               normal: '15 – 25 dB',
                               explain: 'Tỉ số tín hiệu/hệ số nhiễu.'
                             },
