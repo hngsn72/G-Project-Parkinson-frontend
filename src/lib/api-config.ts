@@ -62,6 +62,7 @@ export interface DiagnosisResult {
   model_info: {
     model_version: string;
   };
+  input_type: 'record' | 'file';
 }
 
 export interface VoiceFeatures {

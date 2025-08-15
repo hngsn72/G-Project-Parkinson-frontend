@@ -31,14 +31,14 @@ export default function AnalysisHistory() {
     }
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
-      case 'high': return 'text-red-800 bg-red-100';
-      case 'moderate': return 'text-yellow-800 bg-yellow-100';
-      case 'low': return 'text-green-800 bg-green-100';
-      default: return 'text-gray-800 bg-gray-100';
-    }
-  };
+  // const getRiskColor = (risk: string) => {
+  //   switch (risk) {
+  //     case 'high': return 'text-red-800 bg-red-100';
+  //     case 'moderate': return 'text-yellow-800 bg-yellow-100';
+  //     case 'low': return 'text-green-800 bg-green-100';
+  //     default: return 'text-gray-800 bg-gray-100';
+  //   }
+  // };
 
   // const getStatusIcon = (prediction: string) => {
   //   return prediction.toLowerCase() === 'parkinsons' ? 
@@ -74,8 +74,8 @@ export default function AnalysisHistory() {
     <div className="p-6 space-y-6">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Analysis History</h1>
-        <p className="text-gray-600">Review and manage previous voice analysis records</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Lịch sử phân tích</h1>
+        <p className="text-gray-600">Xem và quản lý các kết quả phân tích giọng nói trước đây</p>
       </div>
 
       {/* Stats Overview */}
@@ -83,7 +83,7 @@ export default function AnalysisHistory() {
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Analyses</p>
+              <p className="text-sm font-medium text-gray-600">Tổng số phân tích</p>
               <p className="text-2xl font-bold text-gray-900">{mockStats.total}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
@@ -95,7 +95,7 @@ export default function AnalysisHistory() {
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">High Risk</p>
+              <p className="text-sm font-medium text-gray-600">Nguy cơ cao</p>
               <p className="text-2xl font-bold text-red-900">{mockStats.high_risk}</p>
             </div>
             <div className="p-3 bg-red-100 rounded-lg">
@@ -107,7 +107,7 @@ export default function AnalysisHistory() {
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">This Week</p>
+              <p className="text-sm font-medium text-gray-600">Trong tuần này</p>
               <p className="text-2xl font-bold text-green-900">{mockStats.this_week}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
@@ -119,7 +119,7 @@ export default function AnalysisHistory() {
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Avg. Accuracy</p>
+              <p className="text-sm font-medium text-gray-600">Độ chính xác TB</p>
               <p className="text-2xl font-bold text-blue-900">{mockStats.accuracy}%</p>
             </div>
             <div className="p-3 bg-purple-100 rounded-lg">
@@ -140,7 +140,7 @@ export default function AnalysisHistory() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by patient name, ID, or analysis ID..."
+                placeholder="Tìm theo tên, mã bệnh nhân hoặc mã phân tích..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -154,10 +154,10 @@ export default function AnalysisHistory() {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="all">All Status</option>
-                  <option value="completed">Completed</option>
-                  <option value="requires_review">Requires Review</option>
-                  <option value="processing">Processing</option>
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="completed">Đã hoàn thành</option>
+                  <option value="requires_review">Cần xem lại</option>
+                  <option value="processing">Đang xử lý</option>
                 </select>
               </div>
 
@@ -166,15 +166,15 @@ export default function AnalysisHistory() {
                 onChange={(e) => setFilterPeriod(e.target.value)}
                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
+                <option value="all">Tất cả thời gian</option>
+                <option value="today">Hôm nay</option>
+                <option value="week">Tuần này</option>
+                <option value="month">Tháng này</option>
               </select>
 
               <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 <Download className="h-4 w-4 mr-2" />
-                Export
+                Xuất dữ liệu
               </button>
             </div>
           </div>
@@ -185,16 +185,12 @@ export default function AnalysisHistory() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session ID</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prediction</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prob. Healthy</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prob. Parkinsons</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk Level</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Audio Duration</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentence</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kết quả</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Độ tin cậy</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời lượng</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Câu đọc</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -202,78 +198,62 @@ export default function AnalysisHistory() {
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-500 mt-2">Loading analysis history...</p>
+                    <p className="text-gray-500 mt-2">Đang tải lịch sử phân tích...</p>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-red-600">
-                    <p>Failed to load history</p>
+                    <p>Tải lịch sử thất bại</p>
                     <p className="text-sm text-gray-500 mt-1">{error}</p>
                     <button 
                       onClick={fetchHistory}
                       className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
                     >
-                      Try again
+                      Thử lại
                     </button>
                   </td>
                 </tr>
               ) : filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    <p>No analysis records found</p>
+                    <p>Không tìm thấy bản ghi phân tích nào</p>
                   </td>
                 </tr>
               ) : (
-                filteredData.map((analysis: DiagnosisHistory) => {
-                  // Lấy xác suất từ features nếu có, nếu không thì để '-'
-                  const probHealthy = analysis.features && typeof analysis.features.probability_healthy === 'number'
-                    ? `${(analysis.features.probability_healthy * 100).toFixed(1)}%`
-                    : '-';
-                  const probParkinsons = analysis.features && typeof analysis.features.probability_parkinsons === 'number'
-                    ? `${(analysis.features.probability_parkinsons * 100).toFixed(1)}%`
-                    : '-';
-                  return (
-                    <tr key={analysis.session_id || analysis.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 whitespace-nowrap font-mono">{analysis.session_id || analysis.id}</td>
-                      <td className="px-4 py-4 whitespace-nowrap capitalize">
-                        {Number(analysis.prediction) === 1 ? "Parkinsons" : "Healthy"}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">{analysis.confidence || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap">{probHealthy}</td>
-                      <td className="px-4 py-4 whitespace-nowrap">{probParkinsons}</td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRiskColor(analysis.risk_level)}`}>
-                          {analysis.risk_level || '-'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        {new Date(analysis.timestamp || analysis.created_at).toLocaleString()}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">{'audio_duration' in analysis && analysis.audio_duration ? `${analysis.audio_duration.toFixed(2)}s` : '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap">{analysis.sentence || analysis.sentence_used || '-'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          <button className="text-blue-600 hover:text-blue-800 p-1 rounded">
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button className="text-green-600 hover:text-green-800 p-1 rounded">
-                            <Download className="h-4 w-4" />
-                          </button>
-                          <button className="text-gray-600 hover:text-gray-800 p-1 rounded">
-                            <Share2 className="h-4 w-4" />
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(analysis.session_id || analysis.id)}
-                            className="text-red-600 hover:text-red-800 p-1 rounded"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                filteredData.map((analysis: DiagnosisHistory) => (
+                  <tr key={analysis.session_id || analysis.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap capitalize">
+                      {Number(analysis.prediction) === 1 ? "Mắc Parkinson" : "Khỏe mạnh"}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">{analysis.confidence || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {new Date(analysis.timestamp || analysis.created_at).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">{'audio_duration' in analysis && analysis.audio_duration ? `${analysis.audio_duration.toFixed(2)}s` : '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap">{analysis.sentence || analysis.sentence_used || '-'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button className="text-blue-600 hover:text-blue-800 p-1 rounded" title="Xem chi tiết">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button className="text-green-600 hover:text-green-800 p-1 rounded" title="Tải về">
+                          <Download className="h-4 w-4" />
+                        </button>
+                        <button className="text-gray-600 hover:text-gray-800 p-1 rounded" title="Chia sẻ">
+                          <Share2 className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(analysis.session_id || analysis.id)}
+                          className="text-red-600 hover:text-red-800 p-1 rounded"
+                          title="Xóa bản ghi"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -283,11 +263,11 @@ export default function AnalysisHistory() {
         <div className="px-6 py-4 border-t border-gray-100">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              Showing 1 to {filteredData.length} of {filteredData.length} results
+              Hiển thị 1 đến {filteredData.length} trên tổng {filteredData.length} kết quả
             </div>
             <div className="flex items-center space-x-2">
               <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                Previous
+                Trước
               </button>
               <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">
                 1
@@ -296,7 +276,7 @@ export default function AnalysisHistory() {
                 2
               </button>
               <button className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                Next
+                Tiếp
               </button>
             </div>
           </div>
