@@ -17,7 +17,7 @@ import {
   Share2
 } from 'lucide-react';
 
-export default function AnalysisHistory() {
+export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('all');

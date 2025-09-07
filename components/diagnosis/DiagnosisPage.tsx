@@ -15,7 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-export default function VoiceAnalysis() {
+export default function DiagnosisPage() {
   const { 
     analyzeVoice, 
     resetAnalysis, 

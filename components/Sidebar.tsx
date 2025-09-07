@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { 
   Home, 
   Mic, 
-  // Users, 
-  // Calendar, 
+  Users, 
+  Calendar, 
   History, 
   // Settings,
   // BarChart3,
@@ -26,18 +26,18 @@ const navigationItems = [
     icon: Mic,
     description: 'AI Voice Diagnosis'
   },
-  // {
-  //   title: 'Patients',
-  //   href: '/patients', 
-  //   icon: Users,
-  //   description: 'Patient Management'
-  // },
-  // {
-  //   title: 'Scheduler',
-  //   href: '/scheduler',
-  //   icon: Calendar,
-  //   description: 'Appointments'
-  // },
+  {
+    title: 'Patients',
+    href: '/patients', 
+    icon: Users,
+    description: 'Patient Management'
+  },
+  {
+    title: 'Scheduler',
+    href: '/scheduler',
+    icon: Calendar,
+    description: 'Appointments'
+  },
   {
     title: 'History',
     href: '/history',
