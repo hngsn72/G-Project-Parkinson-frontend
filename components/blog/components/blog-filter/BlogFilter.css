@@ -1,0 +1,28 @@
+.blogFilter {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Desktop breakpoint */
+@media (min-width: 900px) {
+  .blogFilter {
+    flex-direction: row;
+  }
+}
+
+.blogFilter .searchInput {
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .blogFilter .searchInput {
+    width: 25ch;
+  }
+}
+
+.blogFilter .categorySelect {
+  min-width: 160px;
+}

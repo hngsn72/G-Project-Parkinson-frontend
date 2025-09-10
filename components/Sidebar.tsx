@@ -10,7 +10,8 @@ import {
   History, 
   // Settings,
   // BarChart3,
-  ChevronRight
+  ChevronRight,
+  Newspaper,
 } from 'lucide-react';
 
 const navigationItems = [
@@ -44,6 +45,12 @@ const navigationItems = [
     icon: History,
     description: 'Analysis Records'
   },
+  {
+    title: 'Bài báo',
+    href: '/blog',
+    icon: Newspaper,
+    description: 'Bài báo'
+  }
   // {
   //   title: 'Reports',
   //   href: '/reports',
