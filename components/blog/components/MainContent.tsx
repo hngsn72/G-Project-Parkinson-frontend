@@ -11,12 +11,15 @@ import { BlogFilter } from "./blog-filter";
 import { Filters } from "./blog-filter/BlogFilter";
 import Link from "next/link";
 import "./MainContent.css"; // ✅ import css
+import { useBlog } from "@/hooks/blog/useBlog";
+import { Alert, CircularProgress } from "@mui/material";
 
 export default function MainContent() {
   const [focusedCardIndex, setFocusedCardIndex] = React.useState<number | null>(
     null
   );
-  const [blogs, setBlogs] = React.useState<CardData[]>(cardData);
+
+   const { blogs, loading, error, createBlog } = useBlog();
 
   const [filters, setFilters] = React.useState<Filters>({
     search: "",
@@ -24,8 +27,10 @@ export default function MainContent() {
     date: "",
   });
 
-  const handleAddBlog = (newBlog: CardData) => {
-    setBlogs([newBlog, ...blogs]); // add new blog to top
+  const handleAddBlog = async (newBlog: CardData) => {
+    console.log('newBlog:', newBlog);
+    await createBlog(newBlog);
+    // setBlogs([newBlog, ...blogs]); // add new blog to top
   };
 
   const handleClick = (focusedCardIndex) => {
@@ -35,7 +40,7 @@ export default function MainContent() {
   return (
     <Box className="mainContent">
       <div className="mainContent-header">
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h4" gutterBottom className="page-title">
           Bài Đăng
         </Typography>
       </div>
@@ -46,6 +51,19 @@ export default function MainContent() {
           <BlogFilter filters={filters} onChange={setFilters} />
         </Box>
       </Box>
+
+      {loading && (
+        <Box display="flex" justifyContent="center" my={4}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {/* ✅ Show error */}
+      {error && (
+        <Alert severity="error" sx={{ my: 2 }}>
+          {error}
+        </Alert>
+      )}
 
       <Grid container spacing={2} columns={12}>
         {blogs.map((card, index) => (

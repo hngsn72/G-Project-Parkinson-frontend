@@ -8,12 +8,12 @@ import Typography from "@mui/material/Typography";
 import * as React from "react";
 import ReactQuill, { Quill } from "react-quill";
 import "react-quill/dist/quill.snow.css";
-import "./CreateBlogModal.css"; // <-- import CSS
+import "./CreateBlogModal.css";
 import { CardData } from "../../types/CardData";
 // @ts-ignore
 import ImageResize from "quill-image-resize-module-react";
 import { BLOG_CATEGORIES } from "../../contains";
-
+import { toast } from "react-toastify";
 interface BlogFormData {
   title: string;
   category: string;
@@ -79,14 +79,19 @@ export default function CreateBlogModal({ onSave }: CreateBlogModalProps) {
       authors: authorsArray,
     };
 
+    console.log("new blog: ", newBlog);
+
     onSave(newBlog);
+
+    toast.success("Bài viết đã được tạo thành công!");
+
     handleClose();
     setFormData({ title: "", category: "", content: "", authors: "", img: "" });
   };
 
   return (
     <div>
-      <Button variant="contained" onClick={handleOpen}>
+      <Button variant="contained" className="create-btn" onClick={handleOpen}>
         Tạo bài đăng
       </Button>
       <Modal

@@ -6,10 +6,11 @@ import {
   InputAdornment,
   Select,
   MenuItem,
-  TextField,
+  TextField,  
+  InputLabel,
 } from "@mui/material";
 import { BLOG_CATEGORIES } from "../../contains";
-import './BlogFilter.css'
+import "./BlogFilter.css";
 
 export interface Filters {
   search: string;
@@ -30,15 +31,14 @@ export function BlogFilter({ filters, onChange }: BlogFilterProps) {
   return (
     <Box className="blogFilter">
       {/* Search */}
-      <FormControl className="searchInput" variant="outlined">
+      <FormControl className="searchInput" variant="outlined" size="small">
         <OutlinedInput
-          size="small"
           id="search"
-          placeholder="Từ khóa..."
+          placeholder="Từ khóa"
           value={filters.search}
           onChange={(e) => handleChange("search", e.target.value)}
           startAdornment={
-            <InputAdornment position="start" sx={{ color: "text.primary" }}>
+            <InputAdornment position="start" sx={{ color: "text.secondary" }}>
               🔍
             </InputAdornment>
           }
@@ -47,11 +47,16 @@ export function BlogFilter({ filters, onChange }: BlogFilterProps) {
       </FormControl>
 
       {/* Category */}
-      <FormControl className="categorySelect">
+      <FormControl className="categorySelect" size="small">
+        <InputLabel id="category-label">Danh mục</InputLabel>
         <Select
+          labelId="category-label"
           value={filters.category}
           onChange={(e) => handleChange("category", e.target.value)}
         >
+          <MenuItem value="">
+            <em>All</em>
+          </MenuItem>
           {BLOG_CATEGORIES.map((cat) => (
             <MenuItem key={cat.value} value={cat.value}>
               {cat.label}
@@ -62,8 +67,11 @@ export function BlogFilter({ filters, onChange }: BlogFilterProps) {
 
       {/* Date */}
       <TextField
+        className="datePicker"
         size="small"
         type="date"
+        label="Ngày"
+        InputLabelProps={{ shrink: true }}
         value={filters.date}
         onChange={(e) => handleChange("date", e.target.value)}
       />

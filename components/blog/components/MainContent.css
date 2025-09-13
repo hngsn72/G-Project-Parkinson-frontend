@@ -10,12 +10,14 @@
 
 .mainContent-toolbar {
   display: flex;
-  flex-direction: column-reverse;
-  width: 100%;
+  flex-wrap: wrap;             
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 32px;
-  overflow: auto;
+  align-items: center;          
+  gap: 1rem;              
+  padding: 1rem 0;   
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;  
+  padding: 1rem;
 }
 
 /* Desktop breakpoint */
@@ -39,3 +41,10 @@
   justify-content: center;
   padding-top: 32px;
 }
+
+.page-title {
+  font-weight: 700 !important;
+  color: #111827 !important;
+  margin-bottom: 16px;
+}
+
