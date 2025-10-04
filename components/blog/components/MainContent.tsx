@@ -19,7 +19,8 @@ export default function MainContent() {
     null
   );
 
-   const { blogs, loading, error, createBlog } = useBlog();
+  const { blogs, loading, error, createBlog } = useBlog();
+  console.log('blogs', blogs)
 
   const [filters, setFilters] = React.useState<Filters>({
     search: "",
