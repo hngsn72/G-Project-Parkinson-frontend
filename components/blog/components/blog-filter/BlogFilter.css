@@ -1,0 +1,31 @@
+.blogFilter {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Desktop breakpoint */
+@media (min-width: 900px) {
+  .blogFilter {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+  }
+}
+
+.blogFilter .searchInput {
+  flex: 1;
+  min-width: 200px;
+}
+
+.blogFilter .categorySelect {
+  min-width: 180px;
+}
+
+.blogFilter .datePicker {
+  min-width: 160px;
+}
