@@ -1,0 +1,74 @@
+.styled-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 16px;
+  overflow: hidden; /* Rounded corners apply to image too */
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb; /* Neutral subtle border */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.styled-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: #d1d5db; /* Slightly darker border on hover */
+  cursor: pointer;
+}
+
+.styled-card:focus-visible {
+  outline: none;
+  border-color: #1976d2; /* MUI primary */
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.35);
+}
+
+.styled-card-media {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.styled-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  flex-grow: 1;
+}
+
+.styled-card-content:last-child {
+  padding-bottom: 16px;
+}
+
+.styled-typography {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3; /* Show a little more */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #4b5563; /* Neutral dark gray for body text */
+  line-height: 1.6;
+}
+
+/* Typography adjustments */
+.styled-card-content h6 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827; /* Near-black */
+}
+
+.styled-card-content .MuiTypography-caption {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #6b7280; /* Muted gray for category/tag */
+  letter-spacing: 0.05em;
+}
+
+@media (min-width: 900px) {
+  .styled-card-media {
+    height: 220px;
+  }
+}

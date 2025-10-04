@@ -10,7 +10,8 @@ import {
   History, 
   // Settings,
   // BarChart3,
-  ChevronRight
+  ChevronRight,
+  Newspaper,
 } from 'lucide-react';
 
 const navigationItems = [
@@ -33,10 +34,10 @@ const navigationItems = [
     description: 'Patient Management'
   },
   {
-    title: 'Scheduler',
+    title: 'Lịch hẹn',
     href: '/scheduler',
     icon: Calendar,
-    description: 'Appointments'
+    description: 'Quản lí lịch hẹn'
   },
   {
     title: 'History',
@@ -44,6 +45,12 @@ const navigationItems = [
     icon: History,
     description: 'Analysis Records'
   },
+  {
+    title: 'Bài báo',
+    href: '/blog',
+    icon: Newspaper,
+    description: 'Bài báo'
+  }
   // {
   //   title: 'Reports',
   //   href: '/reports',
