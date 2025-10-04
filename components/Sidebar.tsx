@@ -33,10 +33,10 @@ const navigationItems = [
     description: 'Patient Management'
   },
   {
-    title: 'Scheduler',
+    title: 'Lịch hẹn',
     href: '/scheduler',
     icon: Calendar,
-    description: 'Appointments'
+    description: 'Quản lí lịch hẹn'
   },
   {
     title: 'History',
