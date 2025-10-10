@@ -10,6 +10,12 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
+  // Role and permission helpers
+  hasRole: (roleName: string) => boolean;
+  hasPermission: (permission: string) => boolean;
+  isAdmin: () => boolean;
+  isDoctor: () => boolean;
+  isPatient: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,8 +82,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     router.push('/signin');
   };
 
+  // Role and permission helpers
+  const hasRole = (roleName: string) => {
+    if (!user) return false;
+    // Check matrix roles first
+    if (user.roles?.some(role => role.name === roleName)) return true;
+    // Fallback to legacy role field
+    return user.role === roleName;
+  };
+
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    // Super admin has all permissions
+    if (hasRole('super_admin') || user.role === 'admin') return true;
+    // Check specific permissions
+    return user.permissions?.includes(permission) || false;
+  };
+
+  const isAdmin = () => hasRole('super_admin') || hasRole('admin') || user?.role === 'admin';
+  const isDoctor = () => hasRole('doctor') || user?.role === 'doctor';
+  const isPatient = () => hasRole('patient') || user?.role === 'patient' || user?.role === 'user';
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, setUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      setUser,
+      hasRole,
+      hasPermission,
+      isAdmin,
+      isDoctor,
+      isPatient
+    }}>
       {children}
     </AuthContext.Provider>
   );

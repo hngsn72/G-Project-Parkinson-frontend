@@ -6,11 +6,29 @@ export type User = {
   user_id: string;
   email: string;
   display_name: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'doctor' | 'patient'; // Updated roles
   status: string;
+  created_at?: string;
+  updated_at?: string;
+  // Matrix role fields
+  roles?: Array<{
+    id: number;
+    name: string;
+    display_name?: string;
+  }>;
+  permissions?: string[];
 };
 
-export type TokenPair = { access_token: string; refresh_token: string };
+export type TokenPair = { 
+  access_token: string; 
+  refresh_token: string; 
+};
+
+export type LoginResponse = {
+  user: User;
+  access_token: string;
+  refresh_token: string;
+};
 
 export class AuthService {
   static getAccessToken() {
@@ -25,7 +43,7 @@ export class AuthService {
   }
 
   static async register(email: string, password: string, displayName: string) {
-    return backendApi.post<{ user: User; tokens: TokenPair }>(API_ENDPOINTS.backend.register, {
+    return backendApi.post<LoginResponse>(API_ENDPOINTS.backend.register, {
       email,
       password,
       display_name: displayName,
@@ -33,14 +51,14 @@ export class AuthService {
   }
 
   static async login(email: string, password: string) {
-    const res = await backendApi.post<{ user: User; tokens: TokenPair }>(API_ENDPOINTS.backend.login, {
+    const res = await backendApi.post<LoginResponse>(API_ENDPOINTS.backend.login, {
       email,
       password,
     });
-    if (res.success && res.data?.tokens) {
+    if (res.success && res.data) {
       if (typeof window !== 'undefined') {
-        localStorage.setItem('access_token', res.data.tokens.access_token);
-        localStorage.setItem('refresh_token', res.data.tokens.refresh_token);
+        localStorage.setItem('access_token', res.data.access_token);
+        localStorage.setItem('refresh_token', res.data.refresh_token);
         if (res.data.user) {
           localStorage.setItem('auth_user', JSON.stringify(res.data.user));
         }
