@@ -1,8 +1,9 @@
 import { API_CONFIG, ApiResponse } from './api-config';
-// Only import dynamically to avoid SSR issues
+import Cookies from 'js-cookie';
+
 function getAccessTokenSafe(): string | null {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return window.localStorage.getItem('access_token');
+  if (typeof window !== 'undefined') {
+    return Cookies.get('access_token') || window.localStorage.getItem('access_token');
   }
   return null;
 }
