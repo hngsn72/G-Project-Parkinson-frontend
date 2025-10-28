@@ -82,4 +82,21 @@ export class BlogService {
     const url = `${API_ENDPOINTS.backend.blogPosts}?${queryParams.toString()}`;
     return backendApi.get<BackendPaginatedResponse<BlogPost>>(url);
   }
+
+  // Comment APIs
+  static async getComments(postId: string, page: number = 1, limit: number = 10) {
+    const url = `${API_ENDPOINTS.backend.blogComments(postId)}?page=${page}&limit=${limit}`;
+    return backendApi.get(url);
+  }
+
+  static async createComment(postId: string, content: string, parentId?: string) {
+    const data: { post_id: number; content: string; parent_id?: string } = { post_id: Number(postId), content };
+    if (parentId) data.parent_id = parentId;
+    return backendApi.post(API_ENDPOINTS.backend.blogComments(postId), data);
+  }
+
+  static async getReplies(commentId: string, page: number = 1, limit: number = 10) {
+    const url = `${API_ENDPOINTS.backend.commentReplies(commentId)}?page=${page}&limit=${limit}`;
+    return backendApi.get(url);
+  }
 }

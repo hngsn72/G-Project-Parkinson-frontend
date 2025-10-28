@@ -1,6 +1,8 @@
 'use client';
 
+import Link from "next/link";
 import { useState, useEffect } from 'react';
+import type { Comment } from '@/types/comment';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,11 +30,68 @@ export default function BlogDetailPage() {
   const { user, isAdmin } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const postId = params?.id as string;
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userName] = useState<string>("");
+  const [newComment, setNewComment] = useState("");
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
 
-  const postId = params?.id as string;
+  // Load comments from API
+  const loadComments = async () => {
+    if (!postId) return;
+    setCommentsLoading(true);
+    setCommentsError(null);
+    try {
+      const res = await BlogService.getComments(postId);
+      // API response: { success, data: Comment[] }
+      if (res.success && Array.isArray(res.data)) {
+        setComments(res.data.map((c: Record<string, any>) => ({
+          name: c.user?.display_name || c.name || 'Ẩn danh',
+          createdAt: c.created_at || c.createdAt,
+          text: c.content || c.text,
+        })));
+      } else {
+        setComments([]);
+        setCommentsError('Không tải được bình luận');
+      }
+    } catch {
+      setCommentsError('Có lỗi khi tải bình luận');
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (postId) {
+      loadComments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [postId]);
+
+  // Add comment handler (API)
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    setCommentsLoading(true);
+    setCommentsError(null);
+    try {
+      const res = await BlogService.createComment(postId, newComment);
+      if (res.success) {
+        setNewComment("");
+        toast.success('Bình luận đã được gửi!');
+        await loadComments();
+      } else {
+        setCommentsError('Không gửi được bình luận');
+      }
+    } catch {
+      setCommentsError('Có lỗi xảy ra khi gửi bình luận');
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
 
   const loadPost = async () => {
     if (!postId) return;
@@ -75,8 +134,7 @@ export default function BlogDetailPage() {
         console.error('❌ API failed:', res);
         setError(res.error || 'Không tìm thấy bài viết');
       }
-    } catch (error) {
-      console.error('💥 Exception loading blog post:', error);
+    } catch {
       setError('Có lỗi xảy ra khi tải bài viết');
     } finally {
       setLoading(false);
@@ -460,6 +518,65 @@ export default function BlogDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Comment Section */}
+      <div className="mt-12 border-t border-gray-200 pt-8">
+        <h3 className="text-2xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+          💬 Bình luận
+        </h3>
+        {/* Comment Input Bar - Always show, Facebook style */}
+        <div className="bg-gray-50 p-5 rounded-2xl shadow-sm border border-gray-200 mb-8">
+          <p className="text-sm text-gray-600 mb-2">
+            Bình luận dưới tên <span className="font-medium text-blue-600">{user?.display_name || userName || 'Ẩn danh'}</span>
+          </p>
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Hãy chia sẻ suy nghĩ của bạn..."
+            className="w-full border border-gray-300 rounded-xl p-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+            rows={3}
+          />
+          <div className="flex justify-end mt-3">
+            <button
+              onClick={handleAddComment}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-xl shadow-sm transition-transform hover:scale-105"
+              disabled={commentsLoading}
+            >
+              Gửi bình luận
+            </button>
+          </div>
+        </div>
+
+        {/* Comment List */}
+        {commentsLoading ? (
+          <p className="text-gray-500 text-center py-6 italic">Đang tải bình luận...</p>
+        ) : commentsError ? (
+          <p className="text-red-500 text-center py-6 italic">{commentsError}</p>
+        ) : comments.length > 0 ? (
+          <ul className="space-y-5">
+            {comments.map((comment, index) => (
+              <li key={index} className="flex gap-3 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                    {comment.name.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-center">
+                    <p className="font-semibold text-gray-800">{comment.name}</p>
+                    <span className="text-sm text-gray-500">{comment.createdAt}</span>
+                  </div>
+                  <p className="text-gray-700 mt-1 leading-relaxed">{comment.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500 text-center py-6 italic">
+            Chưa có bình luận nào. Hãy là người đầu tiên chia sẻ cảm nghĩ của bạn!
+          </p>
+        )}
       </div>
     </div>
   );

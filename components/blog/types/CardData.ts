@@ -10,4 +10,6 @@ export interface CardData {
   title: string;
   description: string;
   authors: Author[];
+  liked?: boolean;
+  bookmarked?: boolean;
 }

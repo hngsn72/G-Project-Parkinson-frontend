@@ -26,10 +26,12 @@ export const API_ENDPOINTS = {
     // Admin endpoints
     adminUsers: '/api/v1/admin/users',
     adminUserById: (id: string) => `/api/v1/admin/users/${id}`,
-    // Blog endpoints
+  // Blog endpoints
     blogPosts: '/api/v1/blog/posts',
     blogPostById: (id: string) => `/api/v1/blog/posts/${id}`,
     blogPostApprove: (id: string) => `/api/v1/blog/posts/${id}/approve`,
+    blogComments: (postId: string) => `/api/v1/blog/posts/${postId}/comments`,
+    commentReplies: (commentId: string) => `/api/v1/blog/comments/${commentId}/replies`,
     // News endpoints
     newsCategories: '/api/v1/news/categories',
     newsArticles: '/api/v1/news/articles',

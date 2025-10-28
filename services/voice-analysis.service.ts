@@ -24,14 +24,26 @@ export class VoiceAnalysisService {
   }
 
   // Analyze voice using V1 API (matches backend exactly)
-  static async analyzeVoice(audioFile: File, sentence: string) {
+  static async analyzeVoice(audioFile: File, sentence: string, user_id: string) {
+    let actualUserId = user_id;
+    if (!actualUserId && typeof window !== 'undefined') {
+      const userRaw = localStorage.getItem('auth_user');
+      if (userRaw) {
+        try {
+          const user = JSON.parse(userRaw);
+          actualUserId = user.user_id;
+        } catch {}
+      }
+    }
     return await backendApi.upload<DiagnosisResult>(
       API_ENDPOINTS.backend.predict,
       audioFile,
       {
         sentence: sentence,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+        user_id: actualUserId || ''
+      },
+      'audio'
     );
   }
 

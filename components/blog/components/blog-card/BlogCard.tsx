@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Typography, Card, CardContent, CardMedia } from "@mui/material";
+import { Typography, Card, CardContent, CardMedia, IconButton, Box } from "@mui/material";
 import { CardData } from "../../types/CardData";
 import { Author } from "./Author";
+import { Favorite, FavoriteBorder, Bookmark, BookmarkBorder } from "@mui/icons-material";
 import "./BlogCard.css";
 
 interface BlogCardProps {
@@ -19,14 +20,22 @@ export function BlogCard({
   onClick,
   sx,
 }: BlogCardProps) {
+  // Local state for like/bookmark (should be replaced by backend state)
+
+  // Like/Bookmark interaction temporarily disabled (no backend API)
+  // const [liked, setLiked] = React.useState(card.liked || false);
+  // const [bookmarked, setBookmarked] = React.useState(card.bookmarked || false);
+  // const [loadingLike, setLoadingLike] = React.useState(false);
+  // const [loadingBookmark, setLoadingBookmark] = React.useState(false);
+  // const handleLike = () => {};
+  // const handleBookmark = () => {};
+
   return (
     <Card
       variant="outlined"
       onFocus={() => onClick(index)}
       tabIndex={0}
-      className={`styled-card ${
-        focusedCardIndex === index ? "Mui-focused" : ""
-      }`}
+      className={`styled-card ${focusedCardIndex === index ? "Mui-focused" : ""}`}
       sx={sx}
     >
       {card.img && (
@@ -38,7 +47,7 @@ export function BlogCard({
         />
       )}
       <CardContent className="styled-card-content">
-        <div>
+        <Box display="flex" flexDirection="column" gap={1}>
           <Typography gutterBottom variant="caption" component="div">
             {card.tag}
           </Typography>
@@ -53,7 +62,9 @@ export function BlogCard({
           >
             {card.description}
           </Typography>
-        </div>
+        </Box>
+        {/* Interaction buttons */}
+        {/* Interaction buttons temporarily hidden until backend API is available */}
       </CardContent>
       <Author authors={card.authors} />
     </Card>
