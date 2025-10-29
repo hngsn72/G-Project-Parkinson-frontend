@@ -1,8 +1,7 @@
 'use client';
 
-import Link from "next/link";
 import { useState, useEffect } from 'react';
-import type { Comment } from '@/types/comment';
+import type { Comment as CommentType, CommentDisplay } from '@/types/comment';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,9 +35,13 @@ export default function BlogDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [userName] = useState<string>("");
   const [newComment, setNewComment] = useState("");
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<CommentDisplay[]>([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState<string>("");
+  const [repliesMap, setRepliesMap] = useState<{ [key: number]: CommentDisplay[] }>({});
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
 
   // Load comments from API
   const loadComments = async () => {
@@ -46,19 +49,21 @@ export default function BlogDetailPage() {
     setCommentsLoading(true);
     setCommentsError(null);
     try {
-      const res = await BlogService.getComments(postId);
-      // API response: { success, data: Comment[] }
-      if (res.success && Array.isArray(res.data)) {
-        setComments(res.data.map((c: Record<string, any>) => ({
-          name: c.user?.display_name || c.name || 'Ẩn danh',
-          createdAt: c.created_at || c.createdAt,
-          text: c.content || c.text,
-        })));
-      } else {
-        setComments([]);
-        setCommentsError('Không tải được bình luận');
-      }
-    } catch {
+      const res = await BlogService.getComments(postId, 1, 20) as { data?: CommentType[] };
+      const items: CommentType[] = Array.isArray(res?.data) ? res.data : [];
+
+      setComments(
+        items.map((c: CommentType) => ({
+          id: c.id,
+          name: c.user?.display_name || `User #${c.user_id}`,
+          avatar: c.user?.display_name || '',
+          createdAt: new Date(c.created_at).toLocaleString('vi-VN'),
+          text: c.content,
+          reply_count: c.reply_count || 0,
+        }))
+      );
+    } catch (error) {
+      console.error('Error loading comments:', error);
       setCommentsError('Có lỗi khi tải bình luận');
     } finally {
       setCommentsLoading(false);
@@ -78,14 +83,10 @@ export default function BlogDetailPage() {
     setCommentsLoading(true);
     setCommentsError(null);
     try {
-      const res = await BlogService.createComment(postId, newComment);
-      if (res.success) {
-        setNewComment("");
-        toast.success('Bình luận đã được gửi!');
-        await loadComments();
-      } else {
-        setCommentsError('Không gửi được bình luận');
-      }
+      await BlogService.createComment(postId, newComment);
+      setNewComment("");
+      toast.success('Bình luận đã được gửi!');
+      await loadComments();
     } catch {
       setCommentsError('Có lỗi xảy ra khi gửi bình luận');
     } finally {
@@ -114,10 +115,14 @@ export default function BlogDetailPage() {
         let actualData: BlogPost = res.data;
         const rawData = res.data as unknown as Record<string, unknown>;
         
-        if (rawData.data && Object.keys(res.data).length === 1) {
-          console.log('🔄 Detected nested data structure, unwrapping...');
-          actualData = rawData.data as BlogPost;
-          console.log('🔍 Unwrapped data:', JSON.stringify(actualData, null, 2));
+        // Fix: Type guard for rawData.data access
+        if (
+          typeof rawData === 'object' &&
+          rawData !== null &&
+          'data' in rawData &&
+          Object.keys(res.data).length === 1
+        ) {
+          actualData = (rawData.data as BlogPost);
         }
         
         console.log('📝 Final data to set:', actualData);
@@ -303,6 +308,78 @@ export default function BlogDetailPage() {
       </div>
     );
   }
+
+  const handleReply = async (commentId: number) => {
+    if (!replyText.trim()) {
+      toast.error('Vui lòng nhập nội dung trả lời');
+      return;
+    }
+
+    setCommentsLoading(true);
+    try {
+      await BlogService.createComment(postId, replyText, commentId);
+      setReplyText("");
+      setReplyingTo(null);
+      toast.success('Đã gửi trả lời!');
+
+      // Reload replies for this comment
+      await loadReplies(commentId);
+    } catch (error) {
+      console.error('Error replying:', error);
+      toast.error('Có lỗi xảy ra khi gửi trả lời');
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const loadReplies = async (commentId: number) => {
+    try {
+      const res = await BlogService.getReplies(commentId.toString(), 1, 50) as { data?: CommentType[] };
+      const items: CommentType[] = Array.isArray(res?.data) ? res.data : [];
+
+      // Tìm parent comment để lấy tên
+      const parentComment = comments.find(c => c.id === commentId);
+      const parentName = parentComment?.name || '';
+
+      setRepliesMap(prev => ({
+        ...prev,
+        [commentId]: items.map((r: CommentType) => ({
+          id: r.id,
+          name: r.user?.display_name || `User #${r.user_id}`,
+          avatar: r.user?.avatar || '',
+          createdAt: new Date(r.created_at).toLocaleString('vi-VN'),
+          text: r.content,
+          reply_count: 0, // Replies không có nested replies
+          repliedToName: parentName, // Tên người được reply
+        }))
+      }));
+
+      // Mark as expanded
+      setExpandedComments(prev => new Set(prev).add(commentId));
+    } catch (error) {
+      console.error('Error loading replies:', error);
+      toast.error('Không thể tải câu trả lời');
+    }
+  };
+
+  // Toggle replies visibility
+  const toggleReplies = (commentId: number) => {
+    if (expandedComments.has(commentId)) {
+      // Collapse
+      setExpandedComments(prev => {
+        const next = new Set(prev);
+        next.delete(commentId);
+        return next;
+      });
+    } else {
+      // Expand and load if not loaded
+      if (!repliesMap[commentId]) {
+        loadReplies(commentId);
+      } else {
+        setExpandedComments(prev => new Set(prev).add(commentId));
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -556,19 +633,118 @@ export default function BlogDetailPage() {
         ) : comments.length > 0 ? (
           <ul className="space-y-5">
             {comments.map((comment, index) => (
-              <li key={index} className="flex gap-3 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
-                    {comment.name.charAt(0).toUpperCase()}
+              <li key={comment.id} className="space-y-3">
+                {/* Main Comment */}
+                <div className="flex gap-3 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                      {comment.name.charAt(0).toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <p className="font-semibold text-gray-800">{comment.name}</p>
+                      <span className="text-sm text-gray-500">{comment.createdAt}</span>
+                    </div>
+                    <p className="text-gray-700 mt-1 leading-relaxed">{comment.text}</p>
+
+                    {/* Action buttons */}
+                    <div className="flex gap-4 mt-2 text-sm">
+                      <button
+                        className="text-blue-600 hover:underline font-medium"
+                        onClick={() => setReplyingTo(comment.id)}
+                      >
+                        💬 Trả lời
+                      </button>
+
+                      {/* Show replies button */}
+                      {comment.reply_count > 0 && (
+                        <button
+                          className="text-gray-600 hover:text-blue-600 hover:underline font-medium"
+                          onClick={() => toggleReplies(comment.id)}
+                        >
+                          {expandedComments.has(comment.id)
+                            ? `▼ Ẩn ${comment.reply_count} câu trả lời`
+                            : `▶ Xem ${comment.reply_count} câu trả lời`
+                          }
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-center">
-                    <p className="font-semibold text-gray-800">{comment.name}</p>
-                    <span className="text-sm text-gray-500">{comment.createdAt}</span>
+
+                {/* Nested Replies - Indented */}
+                {expandedComments.has(comment.id) && repliesMap[comment.id] && (
+                  <div className="ml-12 space-y-3">
+                    {repliesMap[comment.id].map((reply) => (
+                      <div key={reply.id} className="flex gap-3 bg-gray-50 border border-gray-200 rounded-2xl p-4 shadow-sm">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-semibold text-sm">
+                            {reply.name.charAt(0).toUpperCase()}
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center">
+                            <p className="font-semibold text-gray-800 text-sm">{reply.name}</p>
+                            <span className="text-xs text-gray-500">{reply.createdAt}</span>
+                          </div>
+
+                          {/* Hiển thị "Trả lời [Tên]" - Option 2 */}
+                          {reply.repliedToName && (
+                            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                              Trả lời <span className="font-medium text-blue-600">{reply.repliedToName}</span>
+                            </p>
+                          )}
+
+                          <p className="text-gray-700 mt-1 leading-relaxed text-sm">{reply.text}</p>
+
+                          {/* Reply to reply button */}
+                          <button
+                            className="text-blue-600 hover:underline font-medium text-xs mt-1"
+                            onClick={() => setReplyingTo(comment.id)}
+                          >
+                            💬 Trả lời
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-gray-700 mt-1 leading-relaxed">{comment.text}</p>
-                </div>
+                )}
+
+                {/* Reply Input Box - Always under main comment */}
+                {replyingTo === comment.id && (
+                  <div className="ml-12">
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-300">
+                      <p className="text-sm text-gray-600 mb-2">
+                        Trả lời <span className="font-medium text-blue-600">{comment.name}</span>
+                      </p>
+                      <textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Viết trả lời của bạn..."
+                        className="w-full border border-gray-300 rounded-xl p-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500
+        focus:border-transparent transition-all resize-none"
+                        rows={2}
+                      />
+                      <div className="flex justify-end mt-2 gap-2">
+                        <button
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded-xl shadow-sm transition-transform hover:scale-105 
+        disabled:opacity-50"
+                          onClick={() => handleReply(comment.id)}
+                          disabled={!replyText.trim() || commentsLoading}
+                        >
+                          Gửi trả lời
+                        </button>
+                        <button
+                          className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-1 rounded-xl"
+                          onClick={() => { setReplyingTo(null); setReplyText(""); }}
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

@@ -86,17 +86,23 @@ export class BlogService {
   // Comment APIs
   static async getComments(postId: string, page: number = 1, limit: number = 10) {
     const url = `${API_ENDPOINTS.backend.blogComments(postId)}?page=${page}&limit=${limit}`;
-    return backendApi.get(url);
+    const res = await backendApi.get(url);
+    return res.data; // { data: Comment[], pagination }
   }
 
-  static async createComment(postId: string, content: string, parentId?: string) {
-    const data: { post_id: number; content: string; parent_id?: string } = { post_id: Number(postId), content };
-    if (parentId) data.parent_id = parentId;
-    return backendApi.post(API_ENDPOINTS.backend.blogComments(postId), data);
+  static async createComment(postId: string, content: string, parentId?: string | number) {
+    const payload: { content: string; parent_id?: number } = { content };
+    if (parentId !== undefined && parentId !== null && parentId !== '') {
+      const n = typeof parentId === 'string' ? Number(parentId) : parentId;
+      if (!Number.isNaN(n)) payload.parent_id = n;
+    }
+    const res = await backendApi.post(API_ENDPOINTS.backend.blogComments(postId), payload);
+    return res.data; // { data: Comment }
   }
 
   static async getReplies(commentId: string, page: number = 1, limit: number = 10) {
     const url = `${API_ENDPOINTS.backend.commentReplies(commentId)}?page=${page}&limit=${limit}`;
-    return backendApi.get(url);
+    const res = await backendApi.get(url);
+    return res.data; // { data: Reply[], pagination }
   }
 }

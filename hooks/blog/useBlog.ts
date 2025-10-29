@@ -5,6 +5,26 @@ import { CardData } from "@/components/blog/types/CardData";
 import type { BlogPost } from "@/lib/api-config";
 import { BlogService } from "@/services/blog.service";
 
+export interface CommentItem {
+  id: number;
+  post_id: number;
+  user_id: number;
+  content: string;
+  parent_id?: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Paginated<T> {
+  data: T[];
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
 export interface UseBlog {
   blogs: CardData[];
   loading: boolean;
@@ -14,8 +34,9 @@ export interface UseBlog {
   createBlog: (newBlog: Omit<CardData, "id">) => Promise<CardData | null>;
   saveBlog: (postId: string, userId: string) => Promise<void>;
   unsaveBlog: (postId: string, userId: string) => Promise<void>;
-  fetchComments: (postId: string, page?: number, limit?: number) => Promise<unknown>;
-  createComment: (postId: string, content: string, parentId?: string) => Promise<unknown>;
+  fetchComments: (postId: string, page?: number, limit?: number) => Promise<Paginated<CommentItem>>;
+  fetchReplies: (commentId: string, page?: number, limit?: number) => Promise<Paginated<CommentItem>>;
+  createComment: (postId: string, content: string, parentId?: string | number) => Promise<CommentItem>;
 }
 
 export function useBlog(
@@ -125,15 +146,17 @@ export function useBlog(
 
   // Comment APIs
   const fetchComments = useCallback(
-    async (postId: string, page: number = 1, limit: number = 10) => {
-      return BlogService.getComments(postId, page, limit);
+    async (postId: string, page: number = 1, limit: number = 10): Promise<Paginated<CommentItem>> => {
+      const res = await BlogService.getComments(postId, page, limit) as Paginated<CommentItem>;
+      return { data: res?.data ?? [], pagination: res?.pagination };
     },
     []
   );
 
   const createComment = useCallback(
-    async (postId: string, content: string, parentId?: string) => {
-      return BlogService.createComment(postId, content, parentId);
+    async (postId: string, content: string, parentId?: string | number): Promise<CommentItem> => {
+      const res = await BlogService.createComment(postId, content, parentId) as { data?: CommentItem } | CommentItem;
+      return (res as { data?: CommentItem }).data ?? (res as CommentItem);
     },
     []
   );
@@ -142,6 +165,14 @@ export function useBlog(
   useEffect(() => {
     fetchBlogs();
   }, [fetchBlogs]);
+
+  const fetchReplies = useCallback(
+    async (commentId: string, page: number = 1, limit: number = 10): Promise<Paginated<CommentItem>> => {
+      const res = await BlogService.getReplies(commentId, page, limit) as Paginated<CommentItem>;
+      return { data: res?.data ?? [], pagination: res?.pagination };
+    },
+    []
+  );
 
   return {
     blogs,
@@ -153,6 +184,7 @@ export function useBlog(
     saveBlog,
     unsaveBlog,
     fetchComments,
+    fetchReplies,
     createComment,
   };
 }

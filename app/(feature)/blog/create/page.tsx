@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import Image from 'next/image';
 
 export default function CreateBlogPage() {
   const { user, isDoctor, isAdmin } = useAuth();
@@ -186,9 +187,11 @@ export default function CreateBlogPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {formData.images.map((image, index) => (
                     <div key={index} className="relative">
-                      <img
+                      <Image
                         src={image}
                         alt={`Hình ${index + 1}`}
+                        width={500}
+                        height={300}
                         className="w-full h-32 object-cover rounded-lg border"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDIwMCAxMjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMTI4IiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iNjQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM2QjcyODAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMiI+SW1hZ2UgTm90IEZvdW5kPC90ZXh0Pgo8L3N2Zz4K';
@@ -271,9 +274,11 @@ export default function CreateBlogPage() {
                 <div className="space-y-2">
                   {formData.images.map((image, index) => (
                     <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <img
+                      <Image
                         src={image}
                         alt={`Hình ${index + 1}`}
+                        width={500}
+                        height={300}
                         className="w-12 h-12 object-cover rounded border"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+Cjx0ZXh0IHg9IjI0IiB5PSIyNCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZCNzI4MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjgiPkVycm9yPC90ZXh0Pgo8L3N2Zz4K';
