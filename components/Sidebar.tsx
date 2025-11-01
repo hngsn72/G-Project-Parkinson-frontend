@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Home, 
   Mic, 
@@ -12,61 +13,81 @@ import {
   // BarChart3,
   ChevronRight,
   Newspaper,
+  Globe,
+  Shield,
 } from 'lucide-react';
 
-const navigationItems = [
-  {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: Home,
-    description: 'Overview & Analytics'
-  },
-  {
-    title: 'Voice Analysis',
-    href: '/diagnosis',
-    icon: Mic,
-    description: 'AI Voice Diagnosis'
-  },
-  {
-    title: 'Patients',
-    href: '/patients', 
-    icon: Users,
-    description: 'Patient Management'
-  },
-  {
-    title: 'Lịch hẹn',
-    href: '/scheduler',
-    icon: Calendar,
-    description: 'Quản lí lịch hẹn'
-  },
-  {
-    title: 'History',
-    href: '/history',
-    icon: History,
-    description: 'Analysis Records'
-  },
-  {
-    title: 'Bài báo',
-    href: '/blog',
-    icon: Newspaper,
-    description: 'Bài báo'
+const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
+  const baseItems = [
+    {
+      title: 'Dashboard',
+      href: '/dashboard',
+      icon: Home,
+      description: 'Overview & Analytics'
+    },
+    {
+      title: 'Voice Analysis',
+      href: '/diagnosis',
+      icon: Mic,
+      description: 'AI Voice Diagnosis'
+    }
+  ];
+
+  // Add role-specific items
+  if (isAdmin || isDoctor) {
+    baseItems.push({
+      title: 'Patients',
+      href: '/patients', 
+      icon: Users,
+      description: 'Patient Management'
+    });
   }
-  // {
-  //   title: 'Reports',
-  //   href: '/reports',
-  //   icon: BarChart3,
-  //   description: 'Analytics & Reports'
-  // },
-  // {
-  //   title: 'Settings',
-  //   href: '/settings',
-  //   icon: Settings,
-  //   description: 'System Configuration'
-  // }
-];
+
+  baseItems.push(
+    {
+      title: 'Lịch hẹn',
+      href: '/scheduler',
+      icon: Calendar,
+      description: 'Quản lí lịch hẹn'
+    },
+    {
+      title: 'History',
+      href: '/history',
+      icon: History,
+      description: 'Analysis Records'
+    },
+    {
+      title: 'Bài báo',
+      href: '/blog',
+      icon: Newspaper,
+      description: 'Bài báo y khoa'
+    },
+    {
+      title: 'Tin tức',
+      href: '/news',
+      icon: Globe,
+      description: 'Tin tức y khoa'
+    }
+  );
+
+  // Admin-only items
+  if (isAdmin) {
+    baseItems.push({
+      title: 'Admin Panel',
+      href: '/admin',
+      icon: Shield,
+      description: 'Quản lý hệ thống'
+    });
+  }
+
+  return baseItems;
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { isAdmin, isDoctor } = useAuth();
+  
+  const navigationItems = getNavigationItems(isAdmin(), isDoctor());
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';

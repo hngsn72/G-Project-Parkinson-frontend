@@ -1,2 +1,2 @@
-import BlogPage from '@/components/blog/BlogPage';
-export default BlogPage;
+import BlogPageNew from './blog-new';
+export default BlogPageNew;

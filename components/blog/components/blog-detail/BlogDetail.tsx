@@ -7,9 +7,17 @@ import { Bookmark, BookmarkCheck } from "lucide-react";
 import { toast } from "react-toastify";
 import { useBlog } from "@/hooks/blog/useBlog";
 import Link from "next/link";
+import Image from "next/image";
 
 interface BlogDetailProps {
   blog: CardData;
+}
+
+interface BackendComment {
+  id: string | number;
+  author?: { display_name?: string };
+  content: string;
+  created_at: string;
 }
 
 interface Comment {
@@ -20,13 +28,14 @@ interface Comment {
 
 export default function BlogDetail({ blog }: BlogDetailProps) {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState<string | null>(null);
   const [newComment, setNewComment] = useState("");
   const [userName, setUserName] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [isSaved, setIsSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const { saveBlog, unsaveBlog } = useBlog();
+  const { fetchComments, createComment } = useBlog();
 
   useEffect(() => {
     try {
@@ -41,40 +50,107 @@ export default function BlogDetail({ blog }: BlogDetailProps) {
     }
   }, []);
 
+  // Fetch comments from hook
+  useEffect(() => {
+    const loadComments = async () => {
+      setCommentsLoading(true);
+      setCommentsError(null);
+      try {
+        const res = await fetchComments(blog.id);
+        let commentArr: BackendComment[] = [];
+        // Type guard for response
+        if (res && typeof res === "object") {
+          if ("data" in res && Array.isArray(res.data)) {
+            commentArr = res.data as BackendComment[];
+          } else if (
+            "data" in res &&
+            res.data != null &&
+            Array.isArray(res.data)
+          ) {
+            commentArr = res.data as BackendComment[];
+          } else if (
+            "data" in res &&
+            res.data != null &&
+            typeof res.data === "object" &&
+            "data" in res.data &&
+            (res.data as { data: BackendComment[] }).data != null &&
+            Array.isArray((res.data as { data: BackendComment[] }).data)
+          ) {
+            commentArr = (res.data as { data: BackendComment[] }).data;
+          }
+        }
+        const mapped: Comment[] = commentArr.map((c) => ({
+          name: c.author?.display_name || "Anonymous",
+          text: c.content,
+          createdAt: c.created_at,
+        }));
+        setComments(mapped);
+      } catch {
+        setCommentsError("Không thể tải bình luận");
+      } finally {
+        setCommentsLoading(false);
+      }
+    };
+    loadComments();
+  }, [blog.id, fetchComments]);
+
   const handleToggleSave = async () => {
     setIsSaved((prev) => !prev);
     toast.info("Chưa có API lưu bài viết!");
-    // if (!userId) {
-    //   toast.warning("Vui lòng đăng nhập để lưu bài viết!");
-    //   return;
-    // }
-
-    // setLoading(true);
-    // try {
-    //   if (!isSaved) {
-    //     await saveBlog(blog.id.toString(), userId);
-    //     toast.success("Bài viết đã được lưu!");
-    //   } else {
-    //     await unsaveBlog(blog.id.toString(), userId);
-    //     toast.info("Đã bỏ lưu bài viết.");
-    //   }
-    //   setIsSaved((prev) => !prev);
-    // } catch (error: any) {
-    //   toast.error(error.message || "Có lỗi xảy ra khi lưu bài viết!");
-    // } finally {
-    //   setLoading(false);
-    // }
   };
 
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      const newEntry: Comment = {
-        name: userName || "Anonymous",
-        text: newComment,
-        createdAt: new Date().toLocaleString(),
-      };
-      setComments((prev) => [...prev, newEntry]);
-      setNewComment("");
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    if (!userId) {
+      toast.warning("Vui lòng đăng nhập để bình luận!");
+      return;
+    }
+    try {
+      setCommentsLoading(true);
+      const res = await createComment(blog.id, newComment);
+      let success = false;
+      if (res && typeof res === "object" && "data" in res) {
+        success = true;
+      }
+      if (success) {
+        toast.success("Đã gửi bình luận!");
+        setNewComment("");
+        // Reload comments
+        const reloadRes = await fetchComments(blog.id);
+        let commentArr: BackendComment[] = [];
+        if (reloadRes && typeof reloadRes === "object") {
+          if ("data" in reloadRes && Array.isArray(reloadRes.data)) {
+            commentArr = reloadRes.data as BackendComment[];
+          } else if (
+            "data" in reloadRes &&
+            reloadRes.data != null &&
+            Array.isArray(reloadRes.data)
+          ) {
+            commentArr = reloadRes.data as BackendComment[];
+          } else if (
+            "data" in reloadRes &&
+            reloadRes.data != null &&
+            typeof reloadRes.data === "object" &&
+            "data" in reloadRes.data &&
+            (reloadRes.data as { data: BackendComment[] }).data != null &&
+            Array.isArray((reloadRes.data as { data: BackendComment[] }).data)
+          ) {
+            commentArr = (reloadRes.data as { data: BackendComment[] }).data;
+          }
+        }
+        const mapped: Comment[] = commentArr.map((c) => ({
+          name: c.author?.display_name || "Anonymous",
+          text: c.content,
+          createdAt: c.created_at,
+        }));
+        setComments(mapped);
+      } else {
+        toast.error("Không gửi được bình luận!");
+      }
+    } catch {
+      toast.error("Có lỗi khi gửi bình luận!");
+    } finally {
+      setCommentsLoading(false);
     }
   };
 
@@ -135,8 +211,8 @@ export default function BlogDetail({ blog }: BlogDetailProps) {
         <Typography variant="h6">Tác giả</Typography>
         {blog.authors.map((author, i) => (
           <Box key={i} sx={{ display: "flex", alignItems: "center", mt: 1 }}>
-            <img
-              src={author.avatar}
+            <Image
+              src={author.avatar || "/default-avatar.png"}
               alt={author.name}
               width={32}
               height={32}
@@ -171,6 +247,7 @@ export default function BlogDetail({ blog }: BlogDetailProps) {
               <button
                 onClick={handleAddComment}
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-xl shadow-sm transition-transform hover:scale-105"
+                disabled={commentsLoading}
               >
                 Gửi bình luận
               </button>
@@ -190,7 +267,15 @@ export default function BlogDetail({ blog }: BlogDetailProps) {
         )}
 
         {/* Comment List */}
-        {comments.length > 0 ? (
+        {commentsLoading ? (
+          <p className="text-gray-500 text-center py-6 italic">
+            Đang tải bình luận...
+          </p>
+        ) : commentsError ? (
+          <p className="text-red-500 text-center py-6 italic">
+            {commentsError}
+          </p>
+        ) : comments.length > 0 ? (
           <ul className="space-y-5">
             {comments.map((comment, index) => (
               <li
@@ -223,8 +308,7 @@ export default function BlogDetail({ blog }: BlogDetailProps) {
           </ul>
         ) : (
           <p className="text-gray-500 text-center py-6 italic">
-            Chưa có bình luận nào. Hãy là người đầu tiên chia sẻ cảm nghĩ của
-            bạn!
+            Chưa có bình luận nào. Hãy là người đầu tiên chia sẻ cảm nghĩ của bạn!
           </p>
         )}
       </div>

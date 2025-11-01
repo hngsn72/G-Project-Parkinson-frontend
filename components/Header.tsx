@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   Search, 
@@ -21,6 +22,7 @@ export default function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm relative z-10">
@@ -133,9 +135,15 @@ export default function Header() {
                     <p className="text-xs text-gray-500">{user?.email || ''}</p>
                   </div>
                   
-                  <button className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <button
+                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      router.push('/profile');
+                    }}
+                  >
                     <User className="h-4 w-4 mr-3" />
-                    Profile Settings
+                    {user?.display_name ? 'Profile Settings' : 'Chưa đăng nhập'}
                   </button>
                   
                   <button className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
