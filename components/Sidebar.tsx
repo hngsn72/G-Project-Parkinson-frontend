@@ -12,9 +12,11 @@ import {
   // Settings,
   // BarChart3,
   ChevronRight,
-  Newspaper,
   Globe,
   Shield,
+  Bookmark,
+  FileText,
+  Building2
 } from 'lucide-react';
 
 const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
@@ -45,6 +47,12 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
 
   baseItems.push(
     {
+      title: 'Bệnh viện',
+      href: '/hospitals',
+      icon: Building2,
+      description: 'Tìm kiếm bệnh viện'
+    },
+    {
       title: 'Lịch hẹn',
       href: '/scheduler',
       icon: Calendar,
@@ -57,16 +65,22 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
       description: 'Analysis Records'
     },
     {
-      title: 'Bài báo',
+      title: 'Blog Bác sĩ',
       href: '/blog',
-      icon: Newspaper,
-      description: 'Bài báo y khoa'
+      icon: FileText,
+      description: 'Blog từ bác sĩ'
     },
     {
       title: 'Tin tức',
       href: '/news',
       icon: Globe,
-      description: 'Tin tức y khoa'
+      description: 'Tin tức chính thức'
+    },
+    {
+      title: 'Bài viết đã lưu',
+      href: '/saved-posts',
+      icon: Bookmark,
+      description: 'Bài viết yêu thích'
     }
   );
 

@@ -105,4 +105,42 @@ export class BlogService {
     const res = await backendApi.get(url);
     return res.data; // { data: Reply[], pagination }
   }
+
+  static async updateComment(commentId: string, content: string) {
+    return backendApi.put(`/api/v1/blog/comments/${commentId}`, { content });
+  }
+
+  static async deleteComment(commentId: string) {
+    return backendApi.delete(`/api/v1/blog/comments/${commentId}`);
+  }
+
+  // Reaction APIs
+  static async reactToPost(postId: number, data: { reaction_type: string }) {
+    return backendApi.post(`${API_ENDPOINTS.backend.blogPosts}/${postId}/react`, data);
+  }
+
+  static async removeReaction(postId: number) {
+    return backendApi.delete(`${API_ENDPOINTS.backend.blogPosts}/${postId}/react`);
+  }
+
+  // Save/Unsave APIs
+  static async savePost(postId: number) {
+    return backendApi.post(`${API_ENDPOINTS.backend.blogPosts}/${postId}/save`);
+  }
+
+  static async unsavePost(postId: number) {
+    return backendApi.delete(`${API_ENDPOINTS.backend.blogPosts}/${postId}/save`);
+  }
+
+  static async getSavedPosts(params?: {
+    page?: number;
+    limit?: number;
+  }) {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    const url = `${API_ENDPOINTS.backend.blogSaved}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    return backendApi.get<BackendPaginatedResponse<BlogPost>>(url);
+  }
 }

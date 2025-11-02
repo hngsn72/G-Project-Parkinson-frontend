@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
     blogPostApprove: (id: string) => `/api/v1/blog/posts/${id}/approve`,
     blogComments: (postId: string) => `/api/v1/blog/posts/${postId}/comments`,
     commentReplies: (commentId: string) => `/api/v1/blog/comments/${commentId}/replies`,
+    blogSaved: '/api/v1/blog/saved',
     // News endpoints
     newsCategories: '/api/v1/news/categories',
     newsArticles: '/api/v1/news/articles',
@@ -42,6 +43,19 @@ export const API_ENDPOINTS = {
     adminNewsCategoryById: (id: string) => `/api/v1/news/admin/categories/${id}`,
     adminNewsArticles: '/api/v1/news/admin/articles',
     adminNewsArticleById: (id: string) => `/api/v1/news/admin/articles/${id}`,
+    // Hospital endpoints
+    hospitals: '/api/v1/hospitals',
+    hospitalById: (id: string) => `/api/v1/hospitals/${id}`,
+    hospitalDoctors: (hospitalId: string) => `/api/v1/hospitals/${hospitalId}/doctors`,
+    hospitalDoctorById: (hospitalId: string, doctorId: string) => `/api/v1/hospitals/${hospitalId}/doctors/${doctorId}`,
+    // Appointment endpoints
+    appointments: '/api/v1/appointments',
+    appointmentById: (id: string) => `/api/v1/appointments/${id}`,
+  // backend route for patient-specific appointments
+  // backend registers this as GET "/api/v1/appointments/my" (patient's own appointments)
+  patientAppointments: '/api/v1/appointments/my',
+    doctorAppointments: '/api/v1/appointments/doctor',
+    appointmentAvailability: (doctorId: string, date: string) => `/api/v1/appointments/availability/${doctorId}/${date}`,
   },
   
   // Legacy diagnosis endpoints (for compatibility)
@@ -203,6 +217,8 @@ export interface BlogPost {
   images?: string[];
   tags?: string[];
   view_count?: number;
+  like_count?: number;
+  comment_count?: number;
   status: 'pending' | 'approved' | 'rejected';
   author_id: number;
   author?: {
@@ -210,12 +226,23 @@ export interface BlogPost {
     display_name: string;
     full_name?: string;
     email: string;
+    role?: string;
   };
   approved_by?: number;
   approved_at?: string;
   rejection_reason?: string;
   created_at: string;
   updated_at: string;
+  // User interaction fields
+  user_reaction?: {
+    id: number;
+    post_id: number;
+    user_id: number;
+    reaction_type: string;
+    created_at: string;
+    updated_at: string;
+  };
+  is_saved?: boolean;
 }
 
 export interface CreateBlogPostRequest {
@@ -321,14 +348,182 @@ export interface PaginatedResponse<T> {
   meta: PaginationMeta;
 }
 
-// Backend actual response structure
-export interface BackendPagination {
+// Backend actual response structure (flat format)
+export interface BackendPaginatedResponse<T> {
+  data: T[];
   page: number;
   limit: number;
   total: number;
 }
 
-export interface BackendPaginatedResponse<T> {
-  data: T[];
-  pagination: BackendPagination;
+// Hospital types
+export interface Hospital {
+  id: number; // Backend trả về number, không phải string
+  name: string;
+  slug?: string;
+  address: string;
+  phone?: string;
+  email?: string;
+  description?: string;
+  website?: string;
+  image?: string;
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  district?: string;
+  province?: string;
+  working_hours?: string; // JSON string
+  emergency_available?: boolean;
+  specializations?: string; // JSON string
+  status: string;
+  is_verified: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  hospital_doctors?: HospitalDoctor[];
+}
+
+export interface HospitalDoctor {
+  id: number;
+  hospital_id: number;
+  doctor_id: string;
+  department?: string;
+  position?: string;
+  is_primary: boolean;
+  consultation_fee?: number;
+  available_days?: string; // JSON string
+  morning_hours?: string;
+  afternoon_hours?: string;
+  status: string;
+  started_at?: string;
+  ended_at?: string;
+  created_at: string;
+  updated_at: string;
+  hospital?: Hospital;
+  doctor?: {
+    id: number;
+    user_id: string;
+    email: string;
+    display_name: string;
+    role: string;
+    status: string;
+    last_login_at?: string;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+export interface Appointment {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  hospital_id: string;
+  appointment_date: string;
+  appointment_time: string;
+  time_slot: 'morning' | 'afternoon' | 'evening';
+  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  reason?: string;
+  notes?: string;
+  symptoms?: string;
+  diagnosis?: string;
+  prescription?: string;
+  follow_up_date?: string;
+  created_at: string;
+  updated_at: string;
+  patient?: {
+    id: string;
+    user_id: string;
+    display_name: string;
+    email: string;
+    phone?: string;
+  };
+  doctor?: {
+    id: string;
+    user_id: string;
+    display_name: string;
+    email: string;
+    specialization?: string;
+  };
+  hospital?: Hospital;
+}
+
+export interface CreateHospitalRequest {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  description?: string;
+  specializations?: string[];
+  latitude?: number;
+  longitude?: number;
+  opening_hours?: string;
+  emergency_contact?: string;
+  website?: string;
+  facilities?: string[];
+  insurance_accepted?: string[];
+}
+
+export type UpdateHospitalRequest = Partial<CreateHospitalRequest>;
+
+export interface CreateHospitalDoctorRequest {
+  doctor_id: string;
+  specialization: string;
+  available_days?: string[];
+  morning_hours?: string;
+  afternoon_hours?: string;
+  consultation_fee?: number;
+}
+
+export interface UpdateHospitalDoctorRequest extends Partial<CreateHospitalDoctorRequest> {
+  status?: 'active' | 'inactive' | 'on_leave';
+}
+
+export interface CreateAppointmentRequest {
+  doctor_id: string;
+  hospital_id: string;
+  appointment_date: string;
+  appointment_time: string;
+  time_slot: 'morning' | 'afternoon' | 'evening';
+  reason?: string;
+  symptoms?: string;
+}
+
+export interface UpdateAppointmentRequest extends Partial<CreateAppointmentRequest> {
+  status?: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  notes?: string;
+  diagnosis?: string;
+  prescription?: string;
+  follow_up_date?: string;
+}
+
+export interface DoctorAvailability {
+  doctor_id: string;
+  date: string;
+  morning_slots: string[];
+  afternoon_slots: string[];
+  evening_slots: string[];
+  booked_slots: string[];
+  available_slots: string[];
+}
+
+export interface HospitalSearchParams {
+  name?: string;
+  address?: string;
+  specialization?: string;
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  page?: number;
+  limit?: number;
+}
+
+export interface AppointmentSearchParams {
+  patient_id?: string;
+  doctor_id?: string;
+  hospital_id?: string;
+  status?: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  date_from?: string;
+  date_to?: string;
+  page?: number;
+  limit?: number;
 }

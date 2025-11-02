@@ -14,7 +14,8 @@ import {
   Calendar,
   HelpCircle,
   LogOut,
-  Stethoscope
+  Stethoscope,
+  Bookmark
 } from 'lucide-react';
 
 export default function Header() {
@@ -144,6 +145,17 @@ export default function Header() {
                   >
                     <User className="h-4 w-4 mr-3" />
                     {user?.display_name ? 'Profile Settings' : 'Chưa đăng nhập'}
+                  </button>
+
+                  <button 
+                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      router.push('/saved-posts');
+                    }}
+                  >
+                    <Bookmark className="h-4 w-4 mr-3" />
+                    Bài viết đã lưu
                   </button>
                   
                   <button className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
