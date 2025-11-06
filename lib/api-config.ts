@@ -421,7 +421,7 @@ export interface Appointment {
   appointment_date: string;
   appointment_time: string;
   time_slot: 'morning' | 'afternoon' | 'evening';
-  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  status: 'pending' | 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   reason?: string;
   notes?: string;
   symptoms?: string;
@@ -521,7 +521,7 @@ export interface AppointmentSearchParams {
   patient_id?: string;
   doctor_id?: string;
   hospital_id?: string;
-  status?: 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  status?: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   date_from?: string;
   date_to?: string;
   page?: number;

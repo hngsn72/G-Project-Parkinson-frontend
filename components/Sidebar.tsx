@@ -19,7 +19,7 @@ import {
   Building2
 } from 'lucide-react';
 
-const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
+const getNavigationItems = (isAdmin: boolean, isDoctor: boolean, isPatient: boolean) => {
   const baseItems = [
     {
       title: 'Dashboard',
@@ -34,6 +34,16 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
       description: 'AI Voice Diagnosis'
     }
   ];
+
+  // Role-specific dashboards
+  if (isDoctor) {
+    baseItems.push({
+      title: 'Bác sĩ Dashboard',
+      href: '/doctor',
+      icon: Shield,
+      description: 'Quản lý lịch hẹn bệnh nhân'
+    });
+  }
 
   // Add role-specific items
   if (isAdmin || isDoctor) {
@@ -56,8 +66,21 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
       title: 'Lịch hẹn',
       href: '/scheduler',
       icon: Calendar,
-      description: 'Quản lí lịch hẹn'
-    },
+      description: 'Đặt lịch khám bệnh'
+    }
+  );
+
+  // Patient-specific items
+  if (isPatient) {
+    baseItems.push({
+      title: 'Lịch hẹn của tôi',
+      href: '/my-appointments',
+      icon: Calendar,
+      description: 'Xem lịch sử lịch hẹn'
+    });
+  }
+
+  baseItems.push(
     {
       title: 'History',
       href: '/history',
@@ -99,9 +122,9 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean) => {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { isAdmin, isDoctor } = useAuth();
+  const { isAdmin, isDoctor, isPatient } = useAuth();
   
-  const navigationItems = getNavigationItems(isAdmin(), isDoctor());
+  const navigationItems = getNavigationItems(isAdmin(), isDoctor(), isPatient());
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';

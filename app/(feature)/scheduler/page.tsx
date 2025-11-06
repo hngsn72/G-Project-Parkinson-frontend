@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { HospitalService } from '@/services/hospital.service';
-import type { Hospital, HospitalDoctor, Appointment, CreateAppointmentRequest } from '@/services';
+import { AppointmentService, CreateAppointmentRequest } from '@/services/appointment.service';
+import type { Hospital, HospitalDoctor, Appointment } from '@/services';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   Calendar, 
@@ -41,6 +42,12 @@ export default function AppointmentBookingPage() {
   const [selectedTime, setSelectedTime] = useState('');
   const [reason, setReason] = useState('');
   const [symptoms, setSymptoms] = useState('');
+  
+  // Patient info for appointment
+  const [patientName, setPatientName] = useState('');
+  const [patientPhone, setPatientPhone] = useState('');
+  const [patientAge, setPatientAge] = useState('');
+  const [patientGender, setPatientGender] = useState<'male' | 'female' | ''>('');
 
   // Fetch hospitals on load
   useEffect(() => {
@@ -52,6 +59,13 @@ export default function AppointmentBookingPage() {
       }
     }
   }, [user, isAdmin, isDoctor]);
+
+  // Auto-fill patient name from user profile
+  useEffect(() => {
+    if (user && !patientName && user.display_name) {
+      setPatientName(user.display_name);
+    }
+  }, [user, patientName]);
 
   const fetchHospitals = async () => {
     try {
@@ -118,19 +132,33 @@ export default function AppointmentBookingPage() {
       return;
     }
 
+    if (!patientName && !user?.display_name) {
+      alert('Vui lòng nhập tên bệnh nhân');
+      return;
+    }
+
+    if (!patientPhone) {
+      alert('Vui lòng nhập số điện thoại bệnh nhân');
+      return;
+    }
+
     try {
       setLoading(true);
       const appointmentData: CreateAppointmentRequest = {
         doctor_id: selectedDoctor.doctor_id,
         hospital_id: selectedHospital.id.toString(),
         appointment_date: selectedDate,
-        appointment_time: selectedTime,
         time_slot: getTimeSlot(selectedTime),
-        reason: reason || undefined,
+        patient_name: patientName || user?.display_name || "Bệnh nhân",
+        patient_phone: patientPhone || "Chưa cung cấp", 
+        patient_age: patientAge ? parseInt(patientAge) : undefined,
+        patient_gender: patientGender || undefined,
         symptoms: symptoms || undefined,
+        notes: reason || undefined,
+        urgency: "normal",
       };
 
-      const response = await HospitalService.createAppointment(appointmentData);
+      const response = await AppointmentService.createAppointment(appointmentData);
       if (response.success) {
         alert('Đặt lịch hẹn thành công!');
         // Reset form
@@ -140,6 +168,10 @@ export default function AppointmentBookingPage() {
         setSelectedTime('');
         setReason('');
         setSymptoms('');
+        setPatientName('');
+        setPatientPhone('');
+        setPatientAge('');
+        setPatientGender('');
         setDoctorsInHospital([]);
         
         // Refresh appointments
@@ -492,9 +524,72 @@ export default function AppointmentBookingPage() {
                 />
               </div>
 
+              {/* Patient Information */}
+              <div className="border-t pt-4">
+                <h4 className="text-md font-medium text-gray-900 mb-3">Thông tin bệnh nhân</h4>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Họ và tên *
+                    </label>
+                    <input
+                      type="text"
+                      value={patientName}
+                      onChange={(e) => setPatientName(e.target.value)}
+                      placeholder={user?.display_name || "Nhập họ và tên"}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Số điện thoại *
+                    </label>
+                    <input
+                      type="tel"
+                      value={patientPhone}
+                      onChange={(e) => setPatientPhone(e.target.value)}
+                      placeholder="Nhập số điện thoại"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tuổi
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={patientAge}
+                      onChange={(e) => setPatientAge(e.target.value)}
+                      placeholder="Nhập tuổi"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Giới tính
+                    </label>
+                    <select
+                      value={patientGender}
+                      onChange={(e) => setPatientGender(e.target.value as 'male' | 'female' | '')}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Chọn giới tính</option>
+                      <option value="male">Nam</option>
+                      <option value="female">Nữ</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={handleBookAppointment}
-                disabled={!selectedHospital || !selectedDoctor || !selectedDate || !selectedTime || loading}
+                disabled={!selectedHospital || !selectedDoctor || !selectedDate || !selectedTime || !patientPhone || loading}
                 className="w-full bg-blue-500 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
               >
                 {loading ? (

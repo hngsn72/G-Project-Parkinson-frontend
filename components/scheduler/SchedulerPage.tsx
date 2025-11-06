@@ -206,7 +206,7 @@ export default function Scheduler() {
       // Create appointment via AppointmentService
       const response = await AppointmentService.createAppointment({
         doctor_id: data.doctor_id,
-        hospital_id: data.hospital_id,
+        hospital_id: data.hospital_id.toString(),
         appointment_date: data.appointment_date,
         time_slot: data.time_slot,
         patient_name: data.patient_name,

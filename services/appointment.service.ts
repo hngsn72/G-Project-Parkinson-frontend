@@ -2,7 +2,7 @@ import { ApiResponse } from './';
 
 export interface CreateAppointmentRequest {
   doctor_id: string;
-  hospital_id: number;
+  hospital_id: string;
   appointment_date: string;
   time_slot: 'morning' | 'afternoon' | 'evening';
   patient_name: string;
