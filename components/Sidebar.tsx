@@ -41,19 +41,19 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean, isPatient: bool
       title: 'Bác sĩ Dashboard',
       href: '/doctor',
       icon: Shield,
-      description: 'Quản lý lịch hẹn bệnh nhân'
+      description: 'Quản lý lịch hẹn & bệnh nhân'
     });
   }
 
   // Add role-specific items
-  if (isAdmin || isDoctor) {
-    baseItems.push({
-      title: 'Patients',
-      href: '/patients', 
-      icon: Users,
-      description: 'Patient Management'
-    });
-  }
+  // if (isAdmin || isDoctor) {
+  //   baseItems.push({
+  //     title: 'Patients',
+  //     href: '/patients', 
+  //     icon: Users,
+  //     description: 'Patient Management'
+  //   });
+  // }
 
   baseItems.push(
     {
@@ -61,14 +61,18 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean, isPatient: bool
       href: '/hospitals',
       icon: Building2,
       description: 'Tìm kiếm bệnh viện'
-    },
-    {
-      title: 'Lịch hẹn',
+    }
+  );
+
+  // Scheduler only for patients
+  if (isPatient) {
+    baseItems.push({
+      title: 'Đặt lịch hẹn',
       href: '/scheduler',
       icon: Calendar,
       description: 'Đặt lịch khám bệnh'
-    }
-  );
+    });
+  }
 
   // Patient-specific items
   if (isPatient) {
@@ -99,12 +103,12 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean, isPatient: bool
       icon: Globe,
       description: 'Tin tức chính thức'
     },
-    {
-      title: 'Bài viết đã lưu',
-      href: '/saved-posts',
-      icon: Bookmark,
-      description: 'Bài viết yêu thích'
-    }
+    // {
+    //   title: 'Bài viết đã lưu',
+    //   href: '/saved-posts',
+    //   icon: Bookmark,
+    //   description: 'Bài viết yêu thích'
+    // }
   );
 
   // Admin-only items

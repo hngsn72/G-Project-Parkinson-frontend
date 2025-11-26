@@ -6,6 +6,7 @@ export { HospitalService } from './hospital.service';
 export type { 
   DiagnosisResult,
   VoiceFeatures,
+  EnhancedVoiceFeatures,
   AnalysisMetadata,
   RandomSentence,
   DiagnosisHistory,

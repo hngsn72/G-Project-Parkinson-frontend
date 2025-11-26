@@ -65,13 +65,32 @@ export default function DiagnosisPage() {
     }
   };
 
-  const getRiskColor = (risk: string) => {
-    switch (risk) {
+  const getRiskColor = (confidence: string, prediction: number) => {
+    if (prediction === 0) {
+      return 'text-green-800 bg-green-100 border-green-200'; // Healthy
+    }
+    
+    switch (confidence?.toLowerCase()) {
       case 'high': return 'text-red-800 bg-red-100 border-red-200';
-      case 'moderate': return 'text-yellow-800 bg-yellow-100 border-yellow-200';
+      case 'medium': return 'text-yellow-800 bg-yellow-100 border-yellow-200';
       case 'low': return 'text-green-800 bg-green-100 border-green-200';
       default: return 'text-gray-800 bg-gray-100 border-gray-200';
     }
+  };
+
+  const getRiskLevel = (confidence: string, prediction: number) => {
+    if (prediction === 0) return 'Thấp';
+    
+    switch (confidence?.toLowerCase()) {
+      case 'high': return 'Cao';
+      case 'medium': return 'Trung bình';
+      case 'low': return 'Thấp';
+      default: return '-';
+    }
+  };
+
+  const getPredictionText = (prediction: number) => {
+    return prediction === 1 ? 'Có dấu hiệu bệnh' : 'Bình thường';
   };
 
   const error = analysisError || recordingError || sentenceError;
@@ -239,11 +258,11 @@ export default function DiagnosisPage() {
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                   {/* Risk Assessment */}
-                  <div className={`text-center p-4 rounded-lg border ${getRiskColor(result.risk_level)}`}>
+                  <div className={`text-center p-4 rounded-lg border ${getRiskColor(result.confidence, result.prediction)}`}>
                     <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
                     <div className="text-sm font-medium">Mức độ nguy cơ</div>
-                    <div className="text-2xl font-bold">{result.risk_level === 'high' ? 'Cao' : result.risk_level === 'moderate' ? 'Trung bình' : result.risk_level === 'low' ? 'Thấp' : '-'}</div>
-                    <div className="text-xs">{result.prediction === 'parkinsons' ? 'Có dấu hiệu bệnh' : 'Bình thường'}</div>
+                    <div className="text-2xl font-bold">{getRiskLevel(result.confidence, result.prediction)}</div>
+                    <div className="text-xs">{getPredictionText(result.prediction)}</div>
                   </div>
                   {/* Confidence Score */}
                   <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -353,115 +372,91 @@ export default function DiagnosisPage() {
                             </tr>
                           ));
                         })()} */}
-                        {/* CODE MỚI: Nếu là voice recording thì fix cứng giá trị đẹp, luôn bình thường */}
-                        {result && result.input_type === 'record' ? (
-                          <>
-                            <tr>
-                              <td className="px-3 py-2 border font-medium">Jitter (%)</td>
-                              <td className="px-3 py-2 border">0.35</td>
-                              <td className="px-3 py-2 border font-semibold text-green-600">Bình thường</td>
-                              <td className="px-3 py-2 border text-gray-500">0.2 – 0.6%</td>
-                              <td className="px-3 py-2 border text-gray-500">Độ dao động tần số cơ bản của giọng nói.</td>
-                            </tr>
-                            <tr>
-                              <td className="px-3 py-2 border font-medium">Shimmer (dB)</td>
-                              <td className="px-3 py-2 border">0.22</td>
-                              <td className="px-3 py-2 border font-semibold text-green-600">Bình thường</td>
-                              <td className="px-3 py-2 border text-gray-500">0.1 – 0.35 dB</td>
-                              <td className="px-3 py-2 border text-gray-500">Độ dao động biên độ của giọng nói.</td>
-                            </tr>
-                            <tr>
-                              <td className="px-3 py-2 border font-medium">HNR (dB)</td>
-                              <td className="px-3 py-2 border">18.5</td>
-                              <td className="px-3 py-2 border font-semibold text-green-600">Bình thường</td>
-                              <td className="px-3 py-2 border text-gray-500">15 – 25 dB</td>
-                              <td className="px-3 py-2 border text-gray-500">Tỉ số tín hiệu/hệ số nhiễu.</td>
-                            </tr>
-                            <tr>
-                              <td className="px-3 py-2 border font-medium">F0 dao động (Hz)</td>
-                              <td className="px-3 py-2 border">162.45</td>
-                              <td className="px-3 py-2 border font-semibold text-green-600">Bình thường</td>
-                              <td className="px-3 py-2 border text-gray-500">≥ 40 Hz</td>
-                              <td className="px-3 py-2 border text-gray-500">Độ dao động tần số cơ bản (F0) của giọng.</td>
-                            </tr>
-                          </>
-                        ) : (
-                          // ...code cũ map featureList...
+                        {/* V3 Scientific Edition Critical Features */}
+                        {result ? (
                           (() => {
+                            const criticalFeatures = result?.critical_features;
                             const features = result?.features || {};
-                            function getJitterLevel(val: number) {
-                              if (val > 1.5) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
-                              if (val > 1.0) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
-                              if (val > 0.6) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
-                              if (val >= 0.2) return { label: 'Bình thường', color: 'text-green-600' };
-                              return { label: '-', color: '' };
-                            }
-                            function getShimmerLevel(val: number) {
-                              if (val > 0.7) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
-                              if (val > 0.5) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
-                              if (val > 0.35) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
-                              if (val >= 0.1) return { label: 'Bình thường', color: 'text-green-600' };
-                              return { label: '-', color: '' };
-                            }
-                            function getHNRLevel(val: number) {
-                              if (val < 10) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
-                              if (val < 12) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
-                              if (val < 15) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
-                              if (val >= 15 && val <= 25) return { label: 'Bình thường', color: 'text-green-600' };
-                              return { label: '-', color: '' };
-                            }
-                            function getF0Level(val: number) {
-                              if (val < 15) return { label: 'Nghi ngờ nặng', color: 'text-red-600' };
-                              if (val < 25) return { label: 'Nghi ngờ trung bình', color: 'text-orange-500' };
-                              if (val < 40) return { label: 'Nghi ngờ nhẹ', color: 'text-yellow-600' };
-                              if (val >= 40) return { label: 'Bình thường', color: 'text-green-600' };
-                              return { label: '-', color: '' };
-                            }
-                            const featureList = [
-                              {
-                                key: 'Jitter (%)',
-                                value: features.jitter,
-                                unit: '%',
-                                level: getJitterLevel(typeof features.jitter === 'number' ? features.jitter : 0),
-                                normal: '0.2 – 0.6%',
-                                explain: 'Độ dao động tần số cơ bản của giọng nói.'
-                              },
-                              {
-                                key: 'Shimmer (dB)',
-                                value: features.shimmer,
-                                unit: 'dB',
-                                level: getShimmerLevel(typeof features.shimmer === 'number' ? features.shimmer : 0),
-                                normal: '0.1 – 0.35 dB',
-                                explain: 'Độ dao động biên độ của giọng nói.'
-                              },
-                              {
-                                key: 'HNR (dB)',
-                                value: features.hnr,
-                                unit: 'dB',
-                                level: getHNRLevel(typeof features.hnr === 'number' ? features.hnr : 0),
-                                normal: '15 – 25 dB',
-                                explain: 'Tỉ số tín hiệu/hệ số nhiễu.'
-                              },
-                              {
-                                key: 'F0 dao động (Hz)',
-                                value: (features.f0 ?? features.fo_range ?? features.mdvp_fo_hz) ?? '-',
-                                unit: 'Hz',
-                                level: getF0Level((features.f0 ?? features.fo_range ?? features.mdvp_fo_hz) ?? 0),
-                                normal: '≥ 40 Hz',
-                                explain: 'Độ dao động tần số cơ bản (F0) của giọng.'
-                              },
-                            ];
-                            return featureList.map(row => (
-                              <tr key={row.key}>
-                                <td className="px-3 py-2 border font-medium">{row.key}</td>
-                                <td className="px-3 py-2 border">{row.value !== undefined ? row.value : '-'}</td>
-                                <td className={`px-3 py-2 border font-semibold ${row.level?.color}`}>{row.level?.label}</td>
-                                <td className="px-3 py-2 border text-gray-500">{row.normal}</td>
-                                <td className="px-3 py-2 border text-gray-500">{row.explain}</td>
-                              </tr>
-                            ));
+                            const getStatus = (value: number, min: number, max: number) => {
+                              if (value >= min && value <= max) return { text: 'Bình thường', color: 'text-green-600' };
+                              return { text: 'Bất thường', color: 'text-red-600' };
+                            };
+                            
+                            return (
+                              <>
+                                {/* V3 Scientific Critical Features - Primary */}
+                                {criticalFeatures?.jitter_local !== undefined && (
+                                  <tr className="bg-blue-50">
+                                    <td className="px-3 py-2 border font-medium text-blue-900">Jitter Local ⭐</td>
+                                    <td className="px-3 py-2 border font-semibold">{(criticalFeatures.jitter_local * 100).toFixed(4)}%</td>
+                                    <td className={`px-3 py-2 border font-semibold ${getStatus(criticalFeatures.jitter_local * 100, 0.2, 0.6).color}`}>
+                                      {getStatus(criticalFeatures.jitter_local * 100, 0.2, 0.6).text}
+                                    </td>
+                                    <td className="px-3 py-2 border text-gray-500">0.2 – 0.6%</td>
+                                    <td className="px-3 py-2 border text-blue-800">🔬 Critical: Frequency perturbation (V3 Scientific)</td>
+                                  </tr>
+                                )}
+                                {criticalFeatures?.shimmer_local !== undefined && (
+                                  <tr className="bg-blue-50">
+                                    <td className="px-3 py-2 border font-medium text-blue-900">Shimmer Local ⭐</td>
+                                    <td className="px-3 py-2 border font-semibold">{(criticalFeatures.shimmer_local * 100).toFixed(4)}%</td>
+                                    <td className={`px-3 py-2 border font-semibold ${getStatus(criticalFeatures.shimmer_local * 100, 10, 35).color}`}>
+                                      {getStatus(criticalFeatures.shimmer_local * 100, 10, 35).text}
+                                    </td>
+                                    <td className="px-3 py-2 border text-gray-500">10 – 35%</td>
+                                    <td className="px-3 py-2 border text-blue-800">🔬 Critical: Amplitude perturbation (V3 Scientific)</td>
+                                  </tr>
+                                )}
+                                {criticalFeatures?.hnr !== undefined && (
+                                  <tr className="bg-blue-50">
+                                    <td className="px-3 py-2 border font-medium text-blue-900">HNR ⭐</td>
+                                    <td className="px-3 py-2 border font-semibold">{criticalFeatures.hnr.toFixed(2)} dB</td>
+                                    <td className={`px-3 py-2 border font-semibold ${getStatus(criticalFeatures.hnr, 15, 25).color}`}>
+                                      {getStatus(criticalFeatures.hnr, 15, 25).text}
+                                    </td>
+                                    <td className="px-3 py-2 border text-gray-500">15 – 25 dB</td>
+                                    <td className="px-3 py-2 border text-blue-800">🔬 Critical: Harmonic-to-Noise Ratio (V3 Scientific)</td>
+                                  </tr>
+                                )}
+                                
+                                {/* Additional Features from Enhanced Model */}
+                                {features.jitter_rel && (
+                                  <tr>
+                                    <td className="px-3 py-2 border font-medium">Jitter Relative</td>
+                                    <td className="px-3 py-2 border">{(features.jitter_rel * 100).toFixed(4)}%</td>
+                                    <td className={`px-3 py-2 border font-semibold ${getStatus(features.jitter_rel * 100, 0.2, 0.6).color}`}>
+                                      {getStatus(features.jitter_rel * 100, 0.2, 0.6).text}
+                                    </td>
+                                    <td className="px-3 py-2 border text-gray-500">0.2 – 0.6%</td>
+                                    <td className="px-3 py-2 border text-gray-500">Relative jitter measurement</td>
+                                  </tr>
+                                )}
+                                {features.shimmer_rel && (
+                                  <tr>
+                                    <td className="px-3 py-2 border font-medium">Shimmer Relative</td>
+                                    <td className="px-3 py-2 border">{(features.shimmer_rel * 100).toFixed(4)}%</td>
+                                    <td className={`px-3 py-2 border font-semibold ${getStatus(features.shimmer_rel * 100, 10, 35).color}`}>
+                                      {getStatus(features.shimmer_rel * 100, 10, 35).text}
+                                    </td>
+                                    <td className="px-3 py-2 border text-gray-500">10 – 35%</td>
+                                    <td className="px-3 py-2 border text-gray-500">Relative shimmer measurement</td>
+                                  </tr>
+                                )}
+                                {features.f0_mean && (
+                                  <tr>
+                                    <td className="px-3 py-2 border font-medium">F0 Mean (Hz)</td>
+                                    <td className="px-3 py-2 border">{features.f0_mean.toFixed(2)} Hz</td>
+                                    <td className={`px-3 py-2 border font-semibold ${getStatus(features.f0_mean, 80, 300).color}`}>
+                                      {getStatus(features.f0_mean, 80, 300).text}
+                                    </td>
+                                    <td className="px-3 py-2 border text-gray-500">80 – 300 Hz</td>
+                                    <td className="px-3 py-2 border text-gray-500">Mean fundamental frequency</td>
+                                  </tr>
+                                )}
+                              </>
+                            );
                           })()
-                        )}
+                        ) : null}
                       </tbody>
                     </table>
                   </div>
@@ -490,31 +485,53 @@ export default function DiagnosisPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Tình trạng</div>
-                      <div className="text-lg font-semibold text-gray-900 capitalize">{result.prediction === 'parkinsons' ? 'Mắc bệnh Parkinson' : 'Khỏe mạnh'}</div>
+                      <div className="text-lg font-semibold text-gray-900 capitalize">{result.prediction === 1 ? 'Mắc bệnh Parkinson' : 'Khỏe mạnh'}</div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Chẩn đoán</div>
                       <div className="text-lg text-gray-900">
-                        {result.risk_level === 'high' && result.prediction === 'parkinsons' && 'Nguy cơ cao mắc Parkinson'}
-                        {result.risk_level === 'moderate' && result.prediction === 'parkinsons' && 'Nguy cơ trung bình mắc Parkinson'}
-                        {result.risk_level === 'low' && result.prediction === 'parkinsons' && 'Nguy cơ thấp mắc Parkinson'}
-                        {result.prediction !== 'parkinsons' && 'Không phát hiện dấu hiệu Parkinson'}
+                        {result.diagnosis || (result.prediction === 1 ? 'Phát hiện dấu hiệu bệnh Parkinson' : 'Không phát hiện dấu hiệu Parkinson')}
                       </div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm font-medium text-gray-700 mb-2">Xác suất</div>
                       <div className="text-lg text-gray-900">
-                        {result && result.input_type === 'record'
-                          ? '97.32%'
-                          : (typeof result.probability === 'number'
-                            ? `${(result.probability * 100).toFixed(2)}%`
-                            : '-')}
+                        {typeof result.probability === 'number' 
+                          ? `${(result.probability * 100).toFixed(2)}%`
+                          : '-'}
                       </div>
                     </div>
                     {result.model_info && (
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <div className="text-sm font-medium text-gray-700 mb-2">Thông tin mô hình</div>
-                        <div className="text-xs text-gray-900 whitespace-pre-wrap">{JSON.stringify(result.model_info, null, 2)}</div>
+                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+                        <div className="text-sm font-medium text-blue-900 mb-3">🧠 V3 Scientific Edition Model Info</div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div><span className="font-semibold text-blue-800">Version:</span> <span className="text-blue-900">{result.model_info.version}</span></div>
+                          <div><span className="font-semibold text-blue-800">Algorithm:</span> <span className="text-blue-900">{result.model_info.algorithm}</span></div>
+                          <div><span className="font-semibold text-blue-800">Accuracy:</span> <span className="text-green-700 font-bold">{(result.model_info.accuracy * 100).toFixed(1)}%</span></div>
+                          <div><span className="font-semibold text-blue-800">Features:</span> <span className="text-blue-900">{result.model_info.features}</span></div>
+                          {result.model_info.auc_score && (
+                            <div><span className="font-semibold text-blue-800">AUC Score:</span> <span className="text-purple-700 font-bold">{result.model_info.auc_score.toFixed(3)}</span></div>
+                          )}
+                          {result.model_info.feature_reduction && (
+                            <div className="col-span-2"><span className="font-semibold text-blue-800">Reduction:</span> <span className="text-orange-700">{result.model_info.feature_reduction}</span></div>
+                          )}
+                          {result.model_info.critical_features_included && (
+                            <div className="col-span-2">
+                              <span className="font-semibold text-blue-800">Critical Features:</span> 
+                              <span className="text-purple-700 ml-1">{result.model_info.critical_features_included.join(', ')}</span>
+                            </div>
+                          )}
+                          <div className="col-span-2">
+                            <span className="font-semibold text-blue-800">Jitter/Shimmer:</span> 
+                            <span className={`ml-1 px-2 py-1 rounded text-xs font-bold ${
+                              result.model_info.includes_jitter_shimmer 
+                                ? 'bg-green-200 text-green-800' 
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {result.model_info.includes_jitter_shimmer ? '✅ Included' : '❌ Not Included'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -584,27 +601,35 @@ export default function DiagnosisPage() {
             </div>
           </div>
 
-          {/* Model Info */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-900">AI Model Info</h3>
+          {/* V3 Scientific Model Info */}
+          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 shadow-sm">
+            <div className="p-6 border-b border-blue-100">
+              <h3 className="text-lg font-semibold text-blue-900">🧠 V3 Scientific AI Model</h3>
             </div>
             <div className="p-6 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Model Version</span>
-                <span className="text-sm font-medium text-gray-900">v2.1.4</span>
+                <span className="text-sm text-blue-700">Model Version</span>
+                <span className="text-sm font-medium text-blue-900">V3 Scientific Edition</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Training Data</span>
-                <span className="text-sm font-medium text-gray-900">15K samples</span>
+                <span className="text-sm text-blue-700">Features</span>
+                <span className="text-sm font-medium text-purple-700">87 (from 768)</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Accuracy</span>
-                <span className="text-sm font-medium text-green-600">94.2%</span>
+                <span className="text-sm text-blue-700">Accuracy</span>
+                <span className="text-sm font-medium text-green-600 font-bold">100%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Last Update</span>
-                <span className="text-sm font-medium text-gray-900">2 days ago</span>
+                <span className="text-sm text-blue-700">Critical Features</span>
+                <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">Jitter, Shimmer, HNR</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-blue-700">Reduction</span>
+                <span className="text-sm font-medium text-orange-600">88.7%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-blue-700">Last Update</span>
+                <span className="text-sm font-medium text-blue-900">Nov 2025</span>
               </div>
             </div>
           </div>

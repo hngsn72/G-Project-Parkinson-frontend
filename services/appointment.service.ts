@@ -4,9 +4,15 @@ export interface CreateAppointmentRequest {
   doctor_id: string;
   hospital_id: string;
   appointment_date: string;
-  time_slot: 'morning' | 'afternoon' | 'evening';
+  time_slot: string; // "07:00", "07:15", "14:00" etc.
+  session: 'morning' | 'afternoon'; // morning or afternoon
+  
+  // Patient Profile
+  patient_profile_id?: number;
+  
   patient_name: string;
   patient_phone: string;
+  patient_email?: string;
   patient_age?: number;
   patient_gender?: 'male' | 'female';
   symptoms?: string;
@@ -20,7 +26,8 @@ export interface Appointment {
   doctor_id: string;
   hospital_id: number;
   appointment_date: string;
-  time_slot: 'morning' | 'afternoon' | 'evening';
+  time_slot: string; // "07:00", "07:15" etc.
+  session: 'morning' | 'afternoon'; // morning or afternoon
   
   // Patient information (for booking without account)
   patient_name: string;
@@ -74,6 +81,23 @@ export interface GetAppointmentsParams {
   date_to?: string;
 }
 
+export interface TimeSlot {
+  time: string; // "07:00", "07:15"
+  available: boolean;
+  booked: number;
+  max_slots: number;
+}
+
+export interface DoctorWithSlots {
+  doctor_id: string;
+  doctor_name: string;
+  department?: string;
+  position?: string;
+  consultation_fee?: number;
+  morning_slots: TimeSlot[];
+  afternoon_slots: TimeSlot[];
+}
+
 export class AppointmentService {
   private static baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8081';
   
@@ -83,6 +107,38 @@ export class AppointmentService {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
     };
+  }
+
+  // Get doctors with available time slots for a specific date
+  static async getDoctorsWithSlots(hospitalId: number, date: string): Promise<ApiResponse<DoctorWithSlots[]>> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/appointments/hospitals/${hospitalId}/doctors/slots?date=${date}`,
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: result.error || 'Không thể tải danh sách bác sĩ',
+        };
+      }
+
+      return {
+        success: true,
+        data: result.data?.doctors || [],
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Lỗi không xác định',
+      };
+    }
   }
 
   // Create new appointment (Patient only)
@@ -105,7 +161,7 @@ export class AppointmentService {
 
       return {
         success: true,
-        data: result,
+        data: result.data || result,
       };
     } catch (error) {
       return {

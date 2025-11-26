@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'https://wonderful-production.up.railway.app',
   ML_SERVICE_URL: process.env.NEXT_PUBLIC_ML_SERVICE_URL || 'https://ml-service-production-850d.up.railway.app',
-  TIMEOUT: 30000, // 30000 = 30 seconds
+  TIMEOUT: 120000, // 120000 = 120 seconds (Extended for Enhanced Model V2 with 768 features)
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
 };
 
@@ -80,24 +80,149 @@ export interface ApiResponse<T = unknown> {
   error?: string;
 }
 
-export interface DiagnosisResult {
-  id: string;
-  prediction: 'healthy' | 'parkinsons';
-  confidence: number;
-  probability_healthy: number;
-  probability_parkinsons: number;
-  risk_level: 'low' | 'moderate' | 'high';
-  features: VoiceFeatures;
-  analysis_metadata: AnalysisMetadata;
-  created_at: string;
-  diagnosis: 'healthy' | 'parkinsons';
-  probability: number;
-  model_info: {
-    model_version: string;
-  };
-  input_type: 'record' | 'file';
+// V3 Scientific Edition Critical Features
+export interface CriticalFeatures {
+  jitter_local: number;  // Frequency perturbation
+  shimmer_local: number; // Amplitude perturbation  
+  hnr: number;           // Harmonic-to-Noise Ratio
 }
 
+// V3 Scientific Edition Model Info
+export interface V3ModelInfo {
+  name: string;
+  version: string;
+  algorithm: string;
+  accuracy: number;
+  f1_score: number;
+  sensitivity: number;
+  specificity: number;
+  features: number;
+  auc_score?: number;
+  feature_reduction?: string; // "768 → 87 (88.7% reduction)"
+  critical_features_included?: string[]; // ["jitter_local", "shimmer_local", "hnr"]
+  includes_jitter_shimmer: boolean;
+}
+
+export interface DiagnosisResult {
+  // V3 Scientific Edition Response Format
+  session_id: string;
+  prediction: number; // 0=Healthy, 1=Parkinson's
+  probability: number; // 0.0-1.0
+  confidence: string; // 'Low' | 'Medium' | 'High'
+  diagnosis: string; // Human-readable diagnosis
+  features: EnhancedVoiceFeatures; // Comprehensive features
+  
+  // V3 Scientific Edition - Critical Clinical Features
+  critical_features?: CriticalFeatures;
+  
+  sentence: string;
+  status: string;
+  timestamp: string;
+  recommendations?: string[];
+  model_info?: V3ModelInfo; // Enhanced V3 Scientific model info
+  
+  // Legacy compatibility fields
+  id?: string;
+  risk_level?: 'low' | 'moderate' | 'high';
+  analysis_metadata?: AnalysisMetadata;
+  created_at?: string;
+  input_type?: 'record' | 'file';
+}
+
+// Enhanced Model V2 - 768 Comprehensive Features
+export interface EnhancedVoiceFeatures {
+  // Clinical Biomarkers
+  f0_mean?: number;
+  f0_std?: number;
+  f0_min?: number;
+  f0_max?: number;
+  f0_range?: number;
+  hnr?: number;
+  jitter_abs?: number;
+  jitter_rel?: number;
+  shimmer_abs?: number;
+  shimmer_rel?: number;
+  
+  // MFCC Features (13 coefficients + derivatives)
+  mfcc_mean_1?: number;
+  mfcc_mean_2?: number;
+  mfcc_mean_3?: number;
+  mfcc_mean_4?: number;
+  mfcc_mean_5?: number;
+  mfcc_mean_6?: number;
+  mfcc_mean_7?: number;
+  mfcc_mean_8?: number;
+  mfcc_mean_9?: number;
+  mfcc_mean_10?: number;
+  mfcc_mean_11?: number;
+  mfcc_mean_12?: number;
+  mfcc_mean_13?: number;
+  
+  // Delta MFCC
+  delta_mfcc_mean_1?: number;
+  delta_mfcc_mean_2?: number;
+  delta_mfcc_mean_3?: number;
+  // ... (continues with delta patterns)
+  
+  // Delta-Delta MFCC
+  delta2_mfcc_mean_1?: number;
+  delta2_mfcc_mean_2?: number;
+  // ... (continues with delta2 patterns)
+  
+  // Mel-Spectrogram Features (128 bands)
+  mel_mean_1?: number;
+  mel_mean_2?: number;
+  // ... (continues up to mel_mean_128)
+  
+  // Spectral Features
+  spectral_centroid_mean?: number;
+  spectral_centroid_std?: number;
+  spectral_bandwidth_mean?: number;
+  spectral_bandwidth_std?: number;
+  spectral_rolloff_mean?: number;
+  spectral_rolloff_std?: number;
+  spectral_flux?: number;
+  
+  // Chroma Features
+  chroma_mean_1?: number;
+  chroma_mean_2?: number;
+  // ... (continues up to chroma_mean_12)
+  
+  // Contrast Features
+  contrast_mean_1?: number;
+  contrast_mean_2?: number;
+  // ... (continues up to contrast_mean_7)
+  
+  // Tonnetz Features
+  tonnetz_mean_1?: number;
+  tonnetz_mean_2?: number;
+  // ... (continues up to tonnetz_mean_6)
+  
+  // Prosodic & Temporal Features
+  duration?: number;
+  tempo?: number;
+  onset_rate?: number;
+  onset_regularity?: number;
+  beat_regularity?: number;
+  pause_count?: number;
+  pause_rate?: number;
+  avg_pause_duration?: number;
+  pause_duration_std?: number;
+  silence_ratio?: number;
+  voiced_ratio?: number;
+  
+  // RMS Energy
+  rms_mean?: number;
+  rms_std?: number;
+  
+  // Zero Crossing Rate
+  zcr?: number;
+  
+  // Allow any additional feature (since we have 768+ features)
+  [key: string]: number | undefined;
+}
+
+// Legacy VoiceFeatures for backward compatibility
 export interface VoiceFeatures {
   // Fundamental frequency measures
   mdvp_fo_hz: number;
@@ -175,11 +300,19 @@ export interface DiagnosisHistory {
   created_at: string;
   prediction: 'Healthy' | 'Parkinsons' | number;
   confidence: number | string;
-  audio_duration: number;
+  audio_duration?: number;
   sentence_used?: string;
   sentence?: string;
-  risk_level: 'low' | 'moderate' | 'high';
-  features?: VoiceFeatures;
+  risk_level?: 'low' | 'moderate' | 'high';
+  diagnosis?: string;
+  probability?: number;
+  features?: EnhancedVoiceFeatures;
+  recommendations?: string[];
+  model_info?: {
+    name: string;
+    accuracy: number;
+    features: number;
+  };
 }
 
 export interface StatsResponse {
@@ -420,7 +553,8 @@ export interface Appointment {
   hospital_id: string;
   appointment_date: string;
   appointment_time: string;
-  time_slot: 'morning' | 'afternoon' | 'evening';
+  time_slot?: string; // Can be specific time like "07:00" or period like "morning"
+  session?: 'morning' | 'afternoon'; // Session period
   status: 'pending' | 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
   reason?: string;
   notes?: string;
@@ -428,6 +562,11 @@ export interface Appointment {
   diagnosis?: string;
   prescription?: string;
   follow_up_date?: string;
+  // Patient demographics (optional, may be provided when creating appointment)
+  patient_name?: string;
+  patient_phone?: string;
+  patient_age?: number;
+  patient_gender?: 'male' | 'female';
   created_at: string;
   updated_at: string;
   patient?: {

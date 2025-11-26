@@ -48,9 +48,6 @@ type CreateDoctorData = {
   hospital_id?: number;
   specialization?: string;
   consultation_fee?: number;
-  available_days?: string[];
-  morning_hours?: string;
-  afternoon_hours?: string;
 }
 
 export default function AdminUsersPage() {
@@ -70,7 +67,10 @@ export default function AdminUsersPage() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   
   // Form state
   const [createData, setCreateData] = useState<CreateDoctorData>({
@@ -80,10 +80,14 @@ export default function AdminUsersPage() {
     phone: '',
     hospital_id: undefined,
     specialization: '',
-    consultation_fee: undefined,
-    available_days: [],
-    morning_hours: '',
-    afternoon_hours: ''
+    consultation_fee: undefined
+  });
+  
+  const [editData, setEditData] = useState({
+    display_name: '',
+    email: '',
+    role: '',
+    status: ''
   });
 
   const itemsPerPage = 10;
@@ -178,10 +182,7 @@ export default function AdminUsersPage() {
             {
               doctor_id: userData.user.user_id,
               specialization: createData.specialization || 'Tổng quát',
-              consultation_fee: createData.consultation_fee || undefined,
-              available_days: createData.available_days,
-              morning_hours: createData.morning_hours,
-              afternoon_hours: createData.afternoon_hours
+              consultation_fee: createData.consultation_fee || undefined
             }
           );
 
@@ -205,11 +206,93 @@ export default function AdminUsersPage() {
         phone: '',
         hospital_id: undefined,
         specialization: '',
-        consultation_fee: undefined,
-        available_days: [],
-        morning_hours: '',
-        afternoon_hours: ''
+        consultation_fee: undefined
       });
+      
+      // Reload users list
+      await loadUsers();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+      
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Lỗi không xác định');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  // Edit user
+  const handleEditUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      setLoadingData(true);
+      setError(null);
+      
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          display_name: editData.display_name,
+          email: editData.email,
+          role: editData.role,
+          status: editData.status
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Không thể cập nhật người dùng');
+      }
+
+      setSuccess('Cập nhật người dùng thành công!');
+      setShowEditModal(false);
+      setSelectedUser(null);
+      
+      // Reload users list
+      await loadUsers();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+      
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Lỗi không xác định');
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  // Delete user
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      setLoadingData(true);
+      setError(null);
+      
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/users/${selectedUser.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Không thể xóa người dùng');
+      }
+
+      setSuccess('Xóa người dùng thành công!');
+      setShowDeleteModal(false);
+      setSelectedUser(null);
       
       // Reload users list
       await loadUsers();
@@ -489,10 +572,30 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4 text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900 p-1" title="Chỉnh sửa">
+                        <button 
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setEditData({
+                              display_name: user.display_name,
+                              email: user.email,
+                              role: user.role,
+                              status: user.status
+                            });
+                            setShowEditModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 p-1" 
+                          title="Chỉnh sửa"
+                        >
                           <Edit className="h-4 w-4" />
                         </button>
-                        <button className="text-red-600 hover:text-red-900 p-1" title="Xóa">
+                        <button 
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setShowDeleteModal(true);
+                          }}
+                          className="text-red-600 hover:text-red-900 p-1" 
+                          title="Xóa"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
@@ -678,32 +781,6 @@ export default function AdminUsersPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Giờ sáng
-                        </label>
-                        <input
-                          type="text"
-                          value={createData.morning_hours}
-                          onChange={(e) => setCreateData({...createData, morning_hours: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="8:00-11:30"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Giờ chiều
-                        </label>
-                        <input
-                          type="text"
-                          value={createData.afternoon_hours}
-                          onChange={(e) => setCreateData({...createData, afternoon_hours: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="13:30-17:00"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Phí khám (VNĐ)
                         </label>
                         <input
@@ -739,6 +816,166 @@ export default function AdminUsersPage() {
                   <Save className="h-4 w-4" />
                 )}
                 Tạo Tài khoản
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Chỉnh sửa Người dùng</h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedUser(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên hiển thị
+                </label>
+                <input
+                  type="text"
+                  value={editData.display_name}
+                  onChange={(e) => setEditData({...editData, display_name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editData.email}
+                  onChange={(e) => setEditData({...editData, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Vai trò
+                </label>
+                <select
+                  value={editData.role}
+                  onChange={(e) => setEditData({...editData, role: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="user">User</option>
+                  <option value="patient">Bệnh nhân</option>
+                  <option value="doctor">Bác sĩ</option>
+                  <option value="admin">Admin</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Trạng thái
+                </label>
+                <select
+                  value={editData.status}
+                  onChange={(e) => setEditData({...editData, status: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Không hoạt động</option>
+                  <option value="pending">Chờ xác nhận</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setSelectedUser(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleEditUser}
+                disabled={loading_data}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading_data ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Cập nhật
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Xác nhận Xóa</h3>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedUser(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+              </div>
+              <p className="text-center text-gray-700">
+                Bạn có chắc chắn muốn xóa người dùng <strong>{selectedUser.display_name}</strong>?
+              </p>
+              <p className="text-center text-sm text-gray-500 mt-2">
+                Hành động này không thể hoàn tác.
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedUser(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteUser}
+                disabled={loading_data}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading_data ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Xóa
               </button>
             </div>
           </div>

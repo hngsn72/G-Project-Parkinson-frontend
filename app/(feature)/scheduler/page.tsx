@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { HospitalService } from '@/services/hospital.service';
-import { AppointmentService, CreateAppointmentRequest } from '@/services/appointment.service';
+import { AppointmentService, CreateAppointmentRequest, DoctorWithSlots, TimeSlot } from '@/services/appointment.service';
 import type { Hospital, HospitalDoctor, Appointment } from '@/services';
 import { useAuth } from '@/hooks/useAuth';
+import PatientProfileSelector from '@/components/patient-profile/PatientProfileSelector';
+import { PatientProfile } from '@/services/patient-profile.service';
 import { 
   Calendar, 
   Clock, 
@@ -28,7 +30,10 @@ export default function AppointmentBookingPage() {
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
   const [doctorsInHospital, setDoctorsInHospital] = useState<HospitalDoctor[]>([]);
+  const [doctorsWithSlots, setDoctorsWithSlots] = useState<DoctorWithSlots[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<HospitalDoctor | null>(null);
+  const [selectedSession, setSelectedSession] = useState<'morning' | 'afternoon'>('morning');
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
   
   // Appointments state
   const [myAppointments, setMyAppointments] = useState<Appointment[]>([]);
@@ -36,14 +41,15 @@ export default function AppointmentBookingPage() {
   
   // UI state
   const [loading, setLoading] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
   const [reason, setReason] = useState('');
   const [symptoms, setSymptoms] = useState('');
   
   // Patient info for appointment
+  const [selectedProfile, setSelectedProfile] = useState<PatientProfile | null>(null);
   const [patientName, setPatientName] = useState('');
   const [patientPhone, setPatientPhone] = useState('');
   const [patientAge, setPatientAge] = useState('');
@@ -67,6 +73,26 @@ export default function AppointmentBookingPage() {
     }
   }, [user, patientName]);
 
+  // Update form when profile is selected
+  useEffect(() => {
+    if (selectedProfile) {
+      // Family member selected - auto-fill their info
+      setPatientName(selectedProfile.full_name);
+      setPatientPhone(selectedProfile.phone);
+      setPatientAge(selectedProfile.date_of_birth ? 
+        String(new Date().getFullYear() - new Date(selectedProfile.date_of_birth).getFullYear()) : 
+        '');
+      setPatientGender(selectedProfile.gender === 'male' || selectedProfile.gender === 'female' ? 
+        selectedProfile.gender : '');
+    } else if (user) {
+      // Current user (self) selected - auto-fill user's info
+      setPatientName(user.display_name || '');
+      setPatientPhone(''); // User doesn't have phone in profile
+      setPatientAge('');
+      setPatientGender('');
+    }
+  }, [selectedProfile, user]);
+
   const fetchHospitals = async () => {
     try {
       setLoading(true);
@@ -86,12 +112,36 @@ export default function AppointmentBookingPage() {
 
   const fetchDoctorsInHospital = async (hospitalId: string) => {
     try {
+      setLoading(true);
       const response = await HospitalService.getHospitalDoctors(hospitalId);
       if (response.success && response.data) {
         setDoctorsInHospital(response.data);
       }
     } catch {
       setError('Không thể tải danh sách bác sĩ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDoctorsWithSlots = async (hospitalId: number, date: string) => {
+    if (!date) {
+      setDoctorsWithSlots([]);
+      return;
+    }
+    
+    try {
+      setLoadingSlots(true);
+      const response = await AppointmentService.getDoctorsWithSlots(hospitalId, date);
+      if (response.success && response.data) {
+        setDoctorsWithSlots(response.data);
+      } else {
+        setError(response.error || 'Không thể tải danh sách bác sĩ và lịch trống');
+      }
+    } catch {
+      setError('Không thể tải danh sách bác sĩ và lịch trống');
+    } finally {
+      setLoadingSlots(false);
     }
   };
 
@@ -123,12 +173,29 @@ export default function AppointmentBookingPage() {
   const handleHospitalSelect = async (hospital: Hospital) => {
     setSelectedHospital(hospital);
     setSelectedDoctor(null);
+    setSelectedTimeSlot(null);
+    setDoctorsWithSlots([]);
+    
+    // Always fetch doctors list immediately
     await fetchDoctorsInHospital(hospital.id.toString());
+    
+    // Fetch slots if date is already selected
+    if (selectedDate) {
+      fetchDoctorsWithSlots(hospital.id, selectedDate);
+    }
   };
 
+  // Fetch slots when date changes
+  useEffect(() => {
+    if (selectedHospital && selectedDate) {
+      fetchDoctorsWithSlots(selectedHospital.id, selectedDate);
+      setSelectedTimeSlot(null); // Reset selected time slot when date changes
+    }
+  }, [selectedDate, selectedHospital]);
+
   const handleBookAppointment = async () => {
-    if (!selectedHospital || !selectedDoctor || !selectedDate || !selectedTime) {
-      alert('Vui lòng điền đầy đủ thông tin');
+    if (!selectedHospital || !selectedDoctor || !selectedDate || !selectedTimeSlot) {
+      alert('Vui lòng điền đầy đủ thông tin và chọn khung giờ');
       return;
     }
 
@@ -145,10 +212,12 @@ export default function AppointmentBookingPage() {
     try {
       setLoading(true);
       const appointmentData: CreateAppointmentRequest = {
-        doctor_id: selectedDoctor.doctor_id,
+        doctor_id: selectedDoctor.doctor_id || '',
         hospital_id: selectedHospital.id.toString(),
         appointment_date: selectedDate,
-        time_slot: getTimeSlot(selectedTime),
+        time_slot: selectedTimeSlot.time,
+        session: selectedSession,
+        patient_profile_id: selectedProfile?.id,
         patient_name: patientName || user?.display_name || "Bệnh nhân",
         patient_phone: patientPhone || "Chưa cung cấp", 
         patient_age: patientAge ? parseInt(patientAge) : undefined,
@@ -165,7 +234,8 @@ export default function AppointmentBookingPage() {
         setSelectedHospital(null);
         setSelectedDoctor(null);
         setSelectedDate('');
-        setSelectedTime('');
+        setSelectedTimeSlot(null);
+        setSelectedSession('morning');
         setReason('');
         setSymptoms('');
         setPatientName('');
@@ -173,6 +243,7 @@ export default function AppointmentBookingPage() {
         setPatientAge('');
         setPatientGender('');
         setDoctorsInHospital([]);
+        setDoctorsWithSlots([]);
         
         // Refresh appointments
         fetchMyAppointments();
@@ -251,7 +322,7 @@ export default function AppointmentBookingPage() {
     }
   };
 
-  const handleEditAppointment = (appointment: Appointment) => {
+  const handleEditAppointment = async (appointment: Appointment) => {
     // Switch to booking tab and pre-fill form
     setActiveTab('book');
     
@@ -259,29 +330,20 @@ export default function AppointmentBookingPage() {
     const hospital = hospitals.find(h => h.id.toString() === appointment.hospital_id?.toString());
     if (hospital) {
       setSelectedHospital(hospital);
-      fetchDoctorsInHospital(hospital.id.toString());
+      await fetchDoctorsInHospital(hospital.id.toString());
     }
     
     // Pre-fill form with appointment data
     setSelectedDate(appointment.appointment_date);
-    setSelectedTime(appointment.appointment_time || '');
     setReason(appointment.reason || '');
     setSymptoms(appointment.symptoms || '');
     
-    // Note: We'll need to set the doctor once doctors are loaded
-    setTimeout(() => {
-      const doctor = doctorsInHospital.find(d => d.doctor_id === appointment.doctor_id);
-      if (doctor) {
-        setSelectedDoctor(doctor);
-      }
-    }, 1000);
-  };
-
-  const getTimeSlot = (time: string): 'morning' | 'afternoon' | 'evening' => {
-    const hour = parseInt(time.split(':')[0]);
-    if (hour < 12) return 'morning';
-    if (hour < 18) return 'afternoon';
-    return 'evening';
+    // Set session if available
+    if (appointment.session) {
+      setSelectedSession(appointment.session as 'morning' | 'afternoon');
+    }
+    
+    // Note: Doctor will need to be selected manually from the list
   };
 
   const getStatusColor = (status: string) => {
@@ -430,40 +492,153 @@ export default function AppointmentBookingPage() {
             {/* Doctor Selection */}
             {selectedHospital && (
               <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Chọn bác sĩ</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  {selectedDate ? 'Chọn bác sĩ và khung giờ' : 'Chọn bác sĩ'}
+                </h3>
                 
-                <div className="space-y-3">
-                  {doctorsInHospital.map((hospitalDoctor) => (
-                    <div
-                      key={hospitalDoctor.id}
-                      onClick={() => setSelectedDoctor(hospitalDoctor)}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedDoctor?.id === hospitalDoctor.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <h4 className="font-medium text-gray-900">
-                        {hospitalDoctor.doctor?.display_name}
-                      </h4>
-                      <div className="text-sm text-gray-600 mt-1">
-                        {hospitalDoctor.department} • {hospitalDoctor.position}
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <span className="ml-3 text-gray-600">Đang tải danh sách bác sĩ...</span>
+                  </div>
+                ) : doctorsInHospital.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    Không có bác sĩ nào tại bệnh viện này
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {doctorsInHospital.map((hospitalDoctor) => {
+                      const doctorSlots = doctorsWithSlots.find(
+                        d => d.doctor_id === hospitalDoctor.doctor_id
+                      );
+                      
+                      return (
+                      <div
+                        key={hospitalDoctor.id}
+                        className={`p-4 border rounded-lg ${
+                          selectedDoctor?.id === hospitalDoctor.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200'
+                        }`}
+                      >
+                        <div 
+                          onClick={() => setSelectedDoctor(hospitalDoctor)}
+                          className="cursor-pointer"
+                        >
+                          <h4 className="font-medium text-gray-900">
+                            {hospitalDoctor.doctor?.display_name}
+                          </h4>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {hospitalDoctor.department} • {hospitalDoctor.position}
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-sm text-gray-500">
+                              Phí khám: {hospitalDoctor.consultation_fee?.toLocaleString('vi-VN')}đ
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              hospitalDoctor.status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {hospitalDoctor.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Time Slots - Only show when date is selected and slots are loaded */}
+                        {selectedDoctor?.id === hospitalDoctor.id && selectedDate && doctorSlots && (
+                          <div className="mt-4 space-y-4">
+                            {loadingSlots ? (
+                              <div className="flex items-center justify-center py-4">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                                <span className="ml-2 text-sm text-gray-600">Đang tải lịch trống...</span>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Session Selector */}
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSession('morning');
+                                      setSelectedTimeSlot(null);
+                                    }}
+                                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                                      selectedSession === 'morning'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    Buổi sáng (7:00-9:30)
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedSession('afternoon');
+                                      setSelectedTimeSlot(null);
+                                    }}
+                                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                                      selectedSession === 'afternoon'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    Buổi chiều (14:00-15:30)
+                                  </button>
+                                </div>
+
+                                {/* Time Slot Grid */}
+                                <div>
+                                  <h5 className="text-sm font-medium text-gray-700 mb-2">
+                                    Chọn khung giờ:
+                                  </h5>
+                                  <div className="grid grid-cols-4 gap-2">
+                                    {(selectedSession === 'morning' 
+                                      ? doctorSlots.morning_slots 
+                                      : doctorSlots.afternoon_slots
+                                    ).map((slot) => (
+                                      <button
+                                        key={slot.time}
+                                        onClick={() => slot.available && setSelectedTimeSlot(slot)}
+                                        disabled={!slot.available}
+                                        className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                                          selectedTimeSlot?.time === slot.time
+                                            ? 'bg-blue-500 text-white'
+                                            : slot.available
+                                            ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        {slot.time}
+                                        {!slot.available && (
+                                          <div className="text-xs mt-0.5">Đầy</div>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {selectedTimeSlot && (
+                                    <div className="mt-2 text-sm text-gray-600">
+                                      Đã chọn: {selectedTimeSlot.time} - 
+                                      Còn {selectedTimeSlot.max_slots - selectedTimeSlot.booked}/{selectedTimeSlot.max_slots} chỗ
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Message when no date selected */}
+                        {selectedDoctor?.id === hospitalDoctor.id && !selectedDate && (
+                          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p className="text-sm text-yellow-800">
+                              Vui lòng chọn ngày khám để xem lịch trống
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-sm text-gray-500">
-                          Phí khám: {hospitalDoctor.consultation_fee?.toLocaleString('vi-VN')}đ
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          hospitalDoctor.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {hospitalDoctor.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -480,23 +655,34 @@ export default function AppointmentBookingPage() {
                 <input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setSelectedDoctor(null);
+                    setSelectedTimeSlot(null);
+                  }}
                   min={new Date().toISOString().split('T')[0]}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Chọn ngày để xem lịch trống của bác sĩ
+                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Giờ khám *
-                </label>
-                <input
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              {selectedTimeSlot && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <div>
+                      <div className="text-sm font-medium text-blue-900">
+                        Khung giờ đã chọn: {selectedTimeSlot.time}
+                      </div>
+                      <div className="text-xs text-blue-700">
+                        {selectedSession === 'morning' ? 'Buổi sáng' : 'Buổi chiều'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -527,6 +713,18 @@ export default function AppointmentBookingPage() {
               {/* Patient Information */}
               <div className="border-t pt-4">
                 <h4 className="text-md font-medium text-gray-900 mb-3">Thông tin bệnh nhân</h4>
+                
+                {/* Patient Profile Selector */}
+                <div className="mb-4">
+                  <PatientProfileSelector
+                    selectedProfileId={selectedProfile?.id || null}
+                    onSelectProfile={(profile) => setSelectedProfile(profile)}
+                    currentUser={user ? {
+                      display_name: user.display_name,
+                      email: user.email
+                    } : undefined}
+                  />
+                </div>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -589,7 +787,7 @@ export default function AppointmentBookingPage() {
 
               <button
                 onClick={handleBookAppointment}
-                disabled={!selectedHospital || !selectedDoctor || !selectedDate || !selectedTime || !patientPhone || loading}
+                disabled={!selectedHospital || !selectedDoctor || !selectedDate || !selectedTimeSlot || !patientPhone || loading}
                 className="w-full bg-blue-500 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -604,6 +802,12 @@ export default function AppointmentBookingPage() {
                   </>
                 )}
               </button>
+              
+              {(!selectedHospital || !selectedDate || !selectedDoctor || !selectedTimeSlot) && (
+                <p className="text-xs text-gray-500 text-center">
+                  Vui lòng chọn bệnh viện, ngày khám, bác sĩ và khung giờ
+                </p>
+              )}
             </div>
           </div>
         </div>

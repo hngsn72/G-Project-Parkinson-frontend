@@ -5,9 +5,7 @@ import AppointmentBookingForm from "./AppointmentBookingForm";
 import AppointmentDetailsModal from "./AppointmentDetailsModal";
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { HospitalService } from '@/services/hospital.service';
 import { AppointmentService } from '@/services/appointment.service';
-import type { Hospital } from '@/services';
 
 // Updated appointment interface to match backend
 export interface AppointmentData {
@@ -17,6 +15,9 @@ export interface AppointmentData {
   hospital_id: number;
   appointment_date: string;
   time_slot: 'morning' | 'afternoon' | 'evening';
+  
+  // Patient profile reference
+  patient_profile_id?: number;
   
   // Patient information (for booking without account)
   patient_name: string;
@@ -70,22 +71,10 @@ export default function Scheduler() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentData | null>(null);
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
 
   const [appointments, setAppointments] = useState<AppointmentData[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const loadHospitals = useCallback(async () => {
-    try {
-      const response = await HospitalService.getAllHospitals({ page: 1, limit: 100 });
-      if (response.success && response.data) {
-        setHospitals(response.data.data);
-      }
-    } catch (e) {
-      console.error('Failed to load hospitals:', e);
-    }
-  }, []);
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -139,10 +128,9 @@ export default function Scheduler() {
     }
     
     if (user) {
-      loadHospitals();
       loadAppointments();
     }
-  }, [loading, user, router, loadHospitals, loadAppointments]);
+  }, [loading, user, router, loadAppointments]);
 
   const handleExport = () => {
     if (appointments.length === 0) {
@@ -209,6 +197,8 @@ export default function Scheduler() {
         hospital_id: data.hospital_id.toString(),
         appointment_date: data.appointment_date,
         time_slot: data.time_slot,
+        session: data.time_slot === 'morning' ? 'morning' : 'afternoon',
+        patient_profile_id: data.patient_profile_id,
         patient_name: data.patient_name,
         patient_phone: data.patient_phone,
         patient_age: data.patient_age,
@@ -491,7 +481,7 @@ export default function Scheduler() {
                 <td className="px-6 py-4">{item.hospital_name || 'N/A'}</td>
                 <td className="px-6 py-4">{item.doctor_name || 'N/A'}</td>
                 <td className="px-6 py-4">
-                  {user?.role === 'admin' ? item.patient_name || 'N/A' : item.reason || 'N/A'}
+                  {user?.role === 'admin' ? item.patient_name || 'N/A' : item.symptoms || 'N/A'}
                 </td>
                 <td className="px-6 py-4 text-center">
                   <span

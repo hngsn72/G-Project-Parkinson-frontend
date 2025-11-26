@@ -451,12 +451,6 @@ export default function HospitalManagementPage() {
               <h3 className="text-lg font-semibold text-gray-900">
                 {selectedHospital ? `Bác sĩ tại ${selectedHospital.name}` : 'Chọn bệnh viện để xem bác sĩ'}
               </h3>
-              {selectedHospital && canManageHospitals && (
-                <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                  <UserPlus className="h-4 w-4" />
-                  Thêm Bác sĩ
-                </button>
-              )}
             </div>
 
             {!selectedHospital && (

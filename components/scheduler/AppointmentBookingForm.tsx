@@ -4,6 +4,8 @@ import { X } from "lucide-react";
 import { AppointmentData } from "../scheduler/SchedulerPage";
 import { HospitalService } from '@/services/hospital.service';
 import type { Hospital, HospitalDoctor } from '@/services';
+import PatientProfileSelector from '../patient-profile/PatientProfileSelector';
+import { PatientProfile } from '@/services/patient-profile.service';
 
 interface AppointmentFormProps {
   open: boolean;
@@ -22,12 +24,14 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [doctors, setDoctors] = useState<HospitalDoctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<PatientProfile | null>(null);
   
   const [form, setForm] = useState({
     doctor_id: "",
     hospital_id: 0,
     appointment_date: "",
     time_slot: "morning" as 'morning' | 'afternoon' | 'evening',
+    patient_profile_id: 0,
     patient_name: "",
     patient_phone: "",
     patient_age: "",
@@ -52,6 +56,23 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
       setDoctors([]);
     }
   }, [form.hospital_id]);
+
+  // Update form when profile is selected
+  useEffect(() => {
+    if (selectedProfile) {
+      setForm(prev => ({
+        ...prev,
+        patient_profile_id: selectedProfile.id,
+        patient_name: selectedProfile.full_name,
+        patient_phone: selectedProfile.phone,
+        patient_age: selectedProfile.date_of_birth ? 
+          String(new Date().getFullYear() - new Date(selectedProfile.date_of_birth).getFullYear()) : 
+          "",
+        patient_gender: selectedProfile.gender === 'male' || selectedProfile.gender === 'female' ? 
+          selectedProfile.gender : '',
+      }));
+    }
+  }, [selectedProfile]);
 
   const loadHospitals = async () => {
     try {
@@ -83,6 +104,11 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!selectedProfile) {
+      alert('Vui lòng chọn người khám');
+      return;
+    }
+
     const newAppointment: AppointmentData = {
       id: Date.now(),
       patient_id: "", // Will be set by backend
@@ -90,6 +116,7 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
       hospital_id: form.hospital_id,
       appointment_date: form.appointment_date,
       time_slot: form.time_slot,
+      patient_profile_id: selectedProfile.id,
       patient_name: form.patient_name,
       patient_phone: form.patient_phone,
       patient_age: form.patient_age ? parseInt(form.patient_age) : undefined,
@@ -103,11 +130,13 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
     };
 
     onSubmit(newAppointment);
+    setSelectedProfile(null);
     setForm({
       doctor_id: "",
       hospital_id: 0,
       appointment_date: "",
       time_slot: "morning",
+      patient_profile_id: 0,
       patient_name: "",
       patient_phone: "",
       patient_age: "",
@@ -213,6 +242,14 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
           <div className="border-t pt-4">
             <h3 className="text-sm font-medium text-gray-900 mb-3">Thông tin bệnh nhân</h3>
             
+            {/* Patient Profile Selector */}
+            <div className="mb-4">
+              <PatientProfileSelector
+                selectedProfileId={selectedProfile?.id || null}
+                onSelectProfile={(profile) => setSelectedProfile(profile)}
+              />
+            </div>
+            
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -222,10 +259,10 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
                   type="text"
                   required
                   value={form.patient_name}
-                  onChange={(e) => setForm({ ...form, patient_name: e.target.value })}
-                  placeholder="Nhập họ và tên"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  readOnly
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">Tự động điền từ hồ sơ bệnh nhân</p>
               </div>
 
               <div>
@@ -236,10 +273,10 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
                   type="tel"
                   required
                   value={form.patient_phone}
-                  onChange={(e) => setForm({ ...form, patient_phone: e.target.value })}
-                  placeholder="Nhập số điện thoại"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  readOnly
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">Tự động điền từ hồ sơ bệnh nhân</p>
               </div>
 
               <div>
@@ -247,13 +284,11 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
                   Tuổi
                 </label>
                 <input
-                  type="number"
-                  min="1"
-                  max="120"
+                  type="text"
                   value={form.patient_age}
-                  onChange={(e) => setForm({ ...form, patient_age: e.target.value })}
-                  placeholder="Nhập tuổi"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  readOnly
+                  placeholder="Chưa có thông tin"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 cursor-not-allowed"
                 />
               </div>
 
@@ -261,15 +296,12 @@ export default function AppointmentForm({ open, onClose, onSubmit }: Appointment
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Giới tính
                 </label>
-                <select
-                  value={form.patient_gender}
-                  onChange={(e) => setForm({ ...form, patient_gender: e.target.value as 'male' | 'female' | '' })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Chọn giới tính</option>
-                  <option value="male">Nam</option>
-                  <option value="female">Nữ</option>
-                </select>
+                <input
+                  type="text"
+                  value={form.patient_gender === 'male' ? 'Nam' : form.patient_gender === 'female' ? 'Nữ' : 'Chưa có thông tin'}
+                  readOnly
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-gray-50 cursor-not-allowed"
+                />
               </div>
             </div>
           </div>
