@@ -123,7 +123,7 @@ export default function Scheduler() {
   // Load hospitals and appointments
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/auth/login');
+      router.replace('/signin');
       return;
     }
     

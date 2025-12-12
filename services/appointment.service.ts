@@ -10,6 +10,9 @@ export interface CreateAppointmentRequest {
   // Patient Profile
   patient_profile_id?: number;
   
+  // Voice Analysis Results - Attach saved detection results
+  voice_analysis_ids?: string[]; // Session IDs of voice analysis results
+  
   patient_name: string;
   patient_phone: string;
   patient_email?: string;
@@ -28,6 +31,12 @@ export interface Appointment {
   appointment_date: string;
   time_slot: string; // "07:00", "07:15" etc.
   session: 'morning' | 'afternoon'; // morning or afternoon
+  
+  // Patient Profile
+  patient_profile_id?: number;
+  
+  // Voice Analysis Results
+  voice_analysis_ids?: string[]; // Session IDs of attached voice analysis
   
   // Patient information (for booking without account)
   patient_name: string;

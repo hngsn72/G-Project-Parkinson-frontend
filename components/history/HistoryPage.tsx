@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAnalysisHistory } from '@/hooks';
 import { DiagnosisHistory } from '@/lib/api-config';
+import DiagnosisDetailModal from './DiagnosisDetailModal';
 import { 
   Search, 
   Filter,
@@ -21,6 +22,7 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('all');
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState<DiagnosisHistory | null>(null);
 
   const { history, isLoading, error, fetchHistory, deleteAnalysis } = useAnalysisHistory();
   console.log('history:', history);
@@ -234,7 +236,11 @@ export default function HistoryPage() {
                     <td className="px-4 py-4 whitespace-nowrap">{analysis.sentence || analysis.sentence_used || '-'}</td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
-                        <button className="text-blue-600 hover:text-blue-800 p-1 rounded" title="Xem chi tiết">
+                        <button 
+                          onClick={() => setSelectedDiagnosis(analysis)}
+                          className="text-blue-600 hover:text-blue-800 p-1 rounded" 
+                          title="Xem chi tiết"
+                        >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button className="text-green-600 hover:text-green-800 p-1 rounded" title="Tải về">
@@ -282,6 +288,14 @@ export default function HistoryPage() {
           </div>
         </div>
       </div>
+
+      {/* Diagnosis Detail Modal */}
+      {selectedDiagnosis && (
+        <DiagnosisDetailModal
+          diagnosis={selectedDiagnosis}
+          onClose={() => setSelectedDiagnosis(null)}
+        />
+      )}
     </div>
   );
 }

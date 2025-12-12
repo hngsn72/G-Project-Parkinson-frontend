@@ -14,6 +14,7 @@ import {
   Download,
   RefreshCw
 } from 'lucide-react';
+import PositiveResultMobile from './PositiveResultMobile';
 
 export default function DiagnosisPage() {
   const { 
@@ -95,192 +96,206 @@ export default function DiagnosisPage() {
 
   const error = analysisError || recordingError || sentenceError;
 
+  // Show mobile-optimized result for positive cases (iPad/Mobile)
+  if (result && result.prediction === 1) {
+    return <PositiveResultMobile result={result} onNewAnalysis={handleReset} />;
+  }
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Phân tích giọng nói</h1>
-        <p className="text-gray-600">Phát hiện bệnh Parkinson bằng AI qua phân tích mẫu giọng nói</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Simplified Header - Desktop: Smaller, Mobile: Same */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 md:px-6 md:py-4">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">Phân tích giọng nói</h1>
+        <p className="text-sm text-gray-600">Phát hiện bệnh Parkinson bằng AI</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recording Section */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-                <Mic className="h-6 w-6 mr-2 text-blue-600" />
-                Ghi âm giọng nói
-              </h2>
-            </div>
-            
-            <div className="p-8">
-              {/* Recording Interface */}
-              <div className="text-center space-y-6">
-
-                {/* Recording Visualizer */}
-                <div className="relative">
-                  <div className={`w-32 h-32 mx-auto rounded-full border-4 flex items-center justify-center transition-all duration-300 ${
+      {/* Desktop: 2 Column Layout, Mobile: Single Column */}
+      <div className="px-4 py-6 md:px-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Main Content - Desktop: 2/3, Mobile: Full */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Recording Card - Compact on Desktop */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="p-4 md:p-6">
+                {/* Recording Visualizer - Smaller on Desktop */}
+                <div className="flex flex-col items-center space-y-4 md:space-y-6">
+                  <div className={`w-32 h-32 md:w-40 md:h-40 rounded-full border-8 flex items-center justify-center transition-all duration-300 ${
                     isRecording 
-                      ? 'border-red-500 bg-red-50 animate-pulse' 
+                      ? 'border-red-500 bg-red-50 shadow-lg shadow-red-200' 
                       : result
-                      ? 'border-green-500 bg-green-50'
+                      ? 'border-green-500 bg-green-50 shadow-lg shadow-green-200'
                       : 'border-gray-300 bg-gray-50'
                   }`}>
                     {isRecording ? (
                       <div className="relative">
-                        <Mic className="h-12 w-12 text-red-500" />
+                        <Mic className="h-12 w-12 md:h-16 md:w-16 text-red-500" />
                         <div className="absolute inset-0 animate-ping">
                           <div className="w-full h-full bg-red-400 rounded-full opacity-75"></div>
                         </div>
                       </div>
                     ) : isAnalyzing ? (
-                      <Brain className="h-12 w-12 text-blue-500 animate-spin" />
+                      <Brain className="h-12 w-12 md:h-16 md:w-16 text-blue-500 animate-spin" />
                     ) : result ? (
-                      <CheckCircle className="h-12 w-12 text-green-500" />
+                      <CheckCircle className="h-12 w-12 md:h-16 md:w-16 text-green-500" />
                     ) : (
-                      <Mic className="h-12 w-12 text-gray-400" />
+                      <Mic className="h-12 w-12 md:h-16 md:w-16 text-gray-400" />
                     )}
                   </div>
+
                   {/* Recording Time */}
                   {isRecording && (
-                    <div className="mt-4">
-                      <div className="text-2xl font-mono font-bold text-red-600">
+                    <div className="text-center">
+                      <div className="text-2xl md:text-3xl font-mono font-bold text-red-600">
                         {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
                       </div>
-                      <div className="text-sm text-gray-500">Recording...</div>
+                      <div className="text-sm md:text-base text-gray-600 mt-2">Đang ghi âm...</div>
                     </div>
                   )}
+
+                  {/* Analyzing */}
                   {isAnalyzing && (
-                    <div className="mt-4">
-                      <div className="text-lg font-semibold text-blue-600">Analyzing Voice Pattern</div>
-                      <div className="text-sm text-gray-500">AI processing in progress...</div>
+                    <div className="text-center">
+                      <div className="text-lg md:text-xl font-semibold text-blue-600">Đang phân tích...</div>
+                      <div className="text-sm text-gray-500 mt-1">AI đang xử lý mẫu giọng nói</div>
                     </div>
                   )}
-                  {error && (
-                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="text-sm text-red-800">{error}</div>
+
+              {/* Error */}
+              {error && (
+                <div className="w-full p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                  <div className="text-sm md:text-base text-red-800 text-center">{error}</div>
+                </div>
+              )}
+
+                  {/* Sentence - Compact on Desktop */}
+                  {(!isAnalyzing && (isRecording || !result) && sentence) && (
+                    <div className="w-full flex flex-col items-center space-y-3">
+                      <span className="text-blue-800 text-sm md:text-base font-semibold">📖 Vui lòng đọc câu sau:</span>
+                      <div className={`bg-blue-50 p-3 md:p-4 rounded-xl border-2 ${isRecording ? 'border-blue-500 ring-4 ring-blue-200' : 'border-blue-200'} w-full`}>
+                        <p className="text-gray-900 font-medium text-base md:text-lg text-center leading-relaxed">
+                          &quot;{sentence.sentence}&quot;
+                        </p>
+                      </div>
+                      {!isRecording && (
+                        <button 
+                          onClick={fetchRandomSentence}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium underline"
+                        >
+                          🔄 Lấy câu khác
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Compact Buttons on Desktop */}
+                  <div className="w-full flex flex-col sm:flex-row justify-center gap-3 md:gap-4 mt-4 md:mt-6">
+                    {!isRecording && !isAnalyzing ? (
+                      <>
+                        <button
+                          onClick={handleStartRecording}
+                          className="flex items-center justify-center gap-2 md:gap-3 px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl md:rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all text-base md:text-lg font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 min-h-[56px] md:min-h-[64px] touch-manipulation"
+                          disabled={isAnalyzing}
+                        >
+                          <Mic className="h-5 w-5 md:h-6 md:w-6" />
+                          <span>Bắt đầu ghi âm</span>
+                        </button>
+                        <label className="flex items-center justify-center gap-2 md:gap-3 px-6 md:px-8 py-4 md:py-5 border-2 border-gray-300 text-gray-700 rounded-xl md:rounded-2xl hover:bg-gray-50 transition-all cursor-pointer text-base md:text-lg font-semibold min-h-[56px] md:min-h-[64px] touch-manipulation">
+                          <Upload className="h-5 w-5 md:h-6 md:w-6" />
+                          <span>Tải file</span>
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </>
+                    ) : isRecording ? (
+                      <button
+                        onClick={handleStopRecording}
+                        className="flex items-center justify-center gap-2 md:gap-3 px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl md:rounded-2xl hover:from-red-700 hover:to-red-800 transition-all text-base md:text-lg font-semibold shadow-lg hover:shadow-xl min-h-[56px] md:min-h-[64px] touch-manipulation w-full sm:w-auto"
+                      >
+                        <Square className="h-5 w-5 md:h-6 md:w-6" />
+                        <span>Dừng ghi âm</span>
+                      </button>
+                    ) : result ? (
+                      <div className="flex flex-col sm:flex-row gap-3 md:gap-4 w-full">
+                        <button
+                          onClick={handleReset}
+                          className="flex items-center justify-center gap-2 md:gap-3 px-6 md:px-8 py-4 md:py-5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl md:rounded-2xl hover:from-blue-700 hover:to-blue-800 transition-all text-base md:text-lg font-semibold shadow-lg hover:shadow-xl min-h-[56px] md:min-h-[64px] touch-manipulation flex-1"
+                        >
+                          <RefreshCw className="h-5 w-5 md:h-6 md:w-6" />
+                          <span>Phân tích mới</span>
+                        </button>
+                        <button className="flex items-center justify-center gap-2 md:gap-3 px-6 md:px-8 py-4 md:py-5 border-2 border-gray-300 text-gray-700 rounded-xl md:rounded-2xl hover:bg-gray-50 transition-all text-base md:text-lg font-semibold min-h-[56px] md:min-h-[64px] touch-manipulation flex-1">
+                          <Download className="h-5 w-5 md:h-6 md:w-6" />
+                          <span>Tải báo cáo</span>
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {/* Instructions - Compact on Desktop */}
+                  {(!isAnalyzing && !result) && (
+                    <div className="w-full bg-blue-50 rounded-xl md:rounded-2xl p-3 md:p-4 border border-blue-200">
+                      <h3 className="font-semibold text-blue-900 mb-2 text-sm md:text-base">💡 Hướng dẫn:</h3>
+                      <ul className="text-xs md:text-sm text-blue-800 space-y-1 md:space-y-2">
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 font-bold">•</span>
+                          <span>Nói rõ ràng vào micro</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 font-bold">•</span>
+                          <span>Ghi âm ít nhất 10-15 giây</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-600 font-bold">•</span>
+                          <span>Môi trường yên tĩnh</span>
+                        </li>
+                      </ul>
                     </div>
                   )}
                 </div>
-
-                {/* Sentence to read - always show in recording card if not analyzing and (not result or isRecording) */}
-                {(!isAnalyzing && (isRecording || !result) && sentence) && (
-                  <div className="mb-2 flex flex-col items-center">
-                    <span className="text-blue-800 text-sm font-medium mb-1">Vui lòng đọc câu sau:</span>
-                    <div className={`bg-white p-3 rounded border border-blue-200 w-fit max-w-full ${isRecording ? 'ring-2 ring-blue-400' : ''}`}>
-                      <span className="text-gray-900 font-medium">&quot;{sentence.sentence}&quot;</span>
-                    </div>
-                    {!isRecording && (
-                      <button 
-                        onClick={fetchRandomSentence}
-                        className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-                      >
-                        Lấy câu khác
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Control Buttons */}
-                <div className="flex justify-center space-x-4">
-                  {!isRecording && !isAnalyzing ? (
-                    <>
-                      <button
-                        onClick={handleStartRecording}
-                        className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        disabled={isAnalyzing}
-                      >
-                        <Mic className="h-5 w-5 mr-2" />
-                        Bắt đầu ghi âm
-                      </button>
-                      <label className="flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                        <Upload className="h-5 w-5 mr-2" />
-                        Tải file âm thanh
-                        <input
-                          type="file"
-                          accept="audio/*"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                      </label>
-                    </>
-                  ) : isRecording ? (
-                    <button
-                      onClick={handleStopRecording}
-                      className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      <Square className="h-5 w-5 mr-2" />
-                      Dừng ghi âm
-                    </button>
-                  ) : result ? (
-                    <div className="flex space-x-3">
-                      <button
-                        onClick={handleReset}
-                        className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <RefreshCw className="h-5 w-5 mr-2" />
-                        Phân tích mới
-                      </button>
-                      <button className="flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        <Download className="h-5 w-5 mr-2" />
-                        Xuất báo cáo
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-
-                {/* Instructions */}
-                {(!isAnalyzing && !result) && (
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <h3 className="font-medium text-blue-900 mb-2">Hướng dẫn ghi âm</h3>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• Nói rõ ràng vào micro</li>
-                      <li>• Ghi âm ít nhất 10-15 giây</li>
-                      <li>• Đảm bảo môi trường yên tĩnh</li>
-                      <li>• Giữ khoảng cách micro ổn định</li>
-                    </ul>
-                  </div>
-                )}
               </div>
             </div>
-          </div>
 
-          {/* Analysis Results */}
-          {result && (
-            <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm">
-              <div className="p-6 border-b border-gray-100">
-                <h3 className="text-xl font-semibold text-gray-900 flex items-center">
-                  <BarChart3 className="h-6 w-6 mr-2 text-green-600" />
-                  Kết quả phân tích
-                </h3>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  {/* Risk Assessment */}
-                  <div className={`text-center p-4 rounded-lg border ${getRiskColor(result.confidence, result.prediction)}`}>
+            {/* Analysis Results - Compact for Desktop */}
+            {result && (
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="p-4 md:p-6 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-200">
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <BarChart3 className="h-6 w-6 text-green-600" />
+                    Kết quả phân tích
+                  </h3>
+                </div>
+                <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+                  {/* Main Result Cards - Compact Grid on Desktop */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                    {/* Risk Assessment */}
+                    <div className={`text-center p-4 rounded-lg border ${getRiskColor(result.confidence, result.prediction)}`}>
                     <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
                     <div className="text-sm font-medium">Mức độ nguy cơ</div>
                     <div className="text-2xl font-bold">{getRiskLevel(result.confidence, result.prediction)}</div>
                     <div className="text-xs">{getPredictionText(result.prediction)}</div>
-                  </div>
-                  {/* Confidence Score */}
-                  <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    </div>
+                    {/* Confidence Score */}
+                    <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <Zap className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                     <div className="text-sm font-medium text-blue-800">Độ tin cậy</div>
                     <div className="text-2xl font-bold text-blue-900">{result.confidence}</div>
                     <div className="text-xs text-blue-700">Độ tin cậy phân tích</div>
-                  </div>
-                  {/* Processing Time */}
-                  <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                    </div>
+                    {/* Processing Time */}
+                    <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
                     <Clock className="h-8 w-8 text-green-600 mx-auto mb-2" />
                     <div className="text-sm font-medium text-green-800">Trạng thái</div>
                     <div className="text-2xl font-bold text-green-900">Hoàn thành</div>
                     <div className="text-xs text-green-700">Đã phân tích xong</div>
+                    </div>
                   </div>
-                </div>
 
-                {/* Bảng chỉ số âm học */}
+                  {/* Bảng chỉ số âm học */}
                 <div className="mb-6">
                   <h4 className="font-semibold text-gray-900 mb-2">Bảng chỉ số âm học</h4>
                   <div className="overflow-x-auto">
@@ -503,7 +518,7 @@ export default function DiagnosisPage() {
                     </div>
                     {result.model_info && (
                       <div className="bg-gradient-to-br from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
-                        <div className="text-sm font-medium text-blue-900 mb-3">🧠 V3 Scientific Edition Model Info</div>
+                        {/* <div className="text-sm font-medium text-blue-900 mb-3">🧠 V3 Scientific Edition Model Info</div>
                         <div className="grid grid-cols-2 gap-3 text-xs">
                           <div><span className="font-semibold text-blue-800">Version:</span> <span className="text-blue-900">{result.model_info.version}</span></div>
                           <div><span className="font-semibold text-blue-800">Algorithm:</span> <span className="text-blue-900">{result.model_info.algorithm}</span></div>
@@ -531,7 +546,7 @@ export default function DiagnosisPage() {
                               {result.model_info.includes_jitter_shimmer ? '✅ Included' : '❌ Not Included'}
                             </span>
                           </div>
-                        </div>
+                        </div> */}
                       </div>
                     )}
                   </div>
@@ -540,8 +555,9 @@ export default function DiagnosisPage() {
             </div>
           )}
         </div>
+        {/* End of Main Content (lg:col-span-2) */}
 
-        {/* Sidebar Info */}
+        {/* Sidebar Info - Desktop: 1/3, Mobile: Full Width Below */}
         <div className="space-y-6">
           {/* Quick Stats */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
@@ -602,7 +618,7 @@ export default function DiagnosisPage() {
           </div>
 
           {/* V3 Scientific Model Info */}
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 shadow-sm">
+          {/* <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 shadow-sm">
             <div className="p-6 border-b border-blue-100">
               <h3 className="text-lg font-semibold text-blue-900">🧠 V3 Scientific AI Model</h3>
             </div>
@@ -632,9 +648,15 @@ export default function DiagnosisPage() {
                 <span className="text-sm font-medium text-blue-900">Nov 2025</span>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
+
       </div>
+      {/* End of Grid */}
+
+    </div>
+    {/* End of Container */}
+
     </div>
   );
 }

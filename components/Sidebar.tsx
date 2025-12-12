@@ -91,18 +91,18 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean, isPatient: bool
       icon: History,
       description: 'Analysis Records'
     },
-    {
-      title: 'Blog Bác sĩ',
-      href: '/blog',
-      icon: FileText,
-      description: 'Blog từ bác sĩ'
-    },
-    {
-      title: 'Tin tức',
-      href: '/news',
-      icon: Globe,
-      description: 'Tin tức chính thức'
-    },
+    // {
+    //   title: 'Blog Bác sĩ',
+    //   href: '/blog',
+    //   icon: FileText,
+    //   description: 'Blog từ bác sĩ'
+    // },
+    // {
+    //   title: 'Tin tức',
+    //   href: '/news',
+    //   icon: Globe,
+    //   description: 'Tin tức chính thức'
+    // },
     // {
     //   title: 'Bài viết đã lưu',
     //   href: '/saved-posts',
@@ -124,7 +124,11 @@ const getNavigationItems = (isAdmin: boolean, isDoctor: boolean, isPatient: bool
   return baseItems;
 };
 
-export default function Sidebar() {
+interface SidebarProps {
+  collapsed?: boolean;
+}
+
+export default function Sidebar({ collapsed = false }: SidebarProps) {
   const pathname = usePathname();
   const { isAdmin, isDoctor, isPatient } = useAuth();
   
@@ -136,7 +140,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="bg-white w-64 min-h-full border-r border-gray-200 shadow-sm">
+    <aside className={`bg-white min-h-full border-r border-gray-200 shadow-sm transition-all duration-300 ${collapsed ? 'w-16' : 'w-64'}`}>
       {/* Navigation Menu */}
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
@@ -152,17 +156,22 @@ export default function Sidebar() {
                     active
                       ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md hover:from-blue-600 hover:to-purple-700'
                       : 'text-gray-700 hover:text-gray-900'
-                  }`}
+                  } ${collapsed ? 'justify-center' : ''}`}
+                  title={collapsed ? item.title : ''}
                 >
-                  <Icon className="h-5 w-5 mr-3 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{item.title}</div>
-                    <div className={`text-xs truncate ${active ? 'text-blue-100' : 'text-gray-500'}`}>
-                      {item.description}
-                    </div>
-                  </div>
-                  {active && (
-                    <ChevronRight className="h-4 w-4 ml-2 opacity-70" />
+                  <Icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'}`} />
+                  {!collapsed && (
+                    <>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{item.title}</div>
+                        <div className={`text-xs truncate ${active ? 'text-blue-100' : 'text-gray-500'}`}>
+                          {item.description}
+                        </div>
+                      </div>
+                      {active && (
+                        <ChevronRight className="h-4 w-4 ml-2 opacity-70" />
+                      )}
+                    </>
                   )}
                 </Link>
               </li>

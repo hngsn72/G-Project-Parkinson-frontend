@@ -18,7 +18,11 @@ import {
   Bookmark
 } from 'lucide-react';
 
-export default function Header() {
+interface HeaderProps {
+  onToggleSidebar?: () => void;
+}
+
+export default function Header({ onToggleSidebar }: HeaderProps) {
   const [searchValue, setSearchValue] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -31,7 +35,10 @@ export default function Header() {
         <div className="flex items-center justify-between">
           {/* Left Section - Logo & Brand */}
           <div className="flex items-center space-x-4">
-            <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <button 
+              onClick={onToggleSidebar}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
               <Menu className="h-5 w-5 text-gray-600" />
             </button>
             

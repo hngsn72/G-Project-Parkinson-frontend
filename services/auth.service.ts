@@ -7,8 +7,12 @@ export type User = {
   user_id: string;
   email: string;
   display_name: string;
+  phone?: string; // Phone number
   role: 'user' | 'admin' | 'doctor' | 'patient'; // Updated roles
   status: string;
+  age?: number;
+  gender?: 'male' | 'female' | 'other';
+  avatar_url?: string;
   created_at?: string;
   updated_at?: string;
   // Matrix role fields
@@ -53,9 +57,9 @@ export class AuthService {
     });
   }
 
-  static async login(email: string, password: string) {
+  static async login(identifier: string, password: string) {
     const res = await backendApi.post<LoginResponse>(API_ENDPOINTS.backend.login, {
-      email,
+      identifier,
       password,
     });
     if (res.success && res.data) {
@@ -92,6 +96,79 @@ export class AuthService {
       localStorage.setItem('access_token', token);
     }
     return backendApi.get<User>(API_ENDPOINTS.backend.profile);
+  }
+
+  // Phone-based authentication
+  static async sendRegisterOTP(phone: string, displayName: string) {
+    return backendApi.post<{ message: string }>(
+      '/api/v1/auth/phone/register/send-otp',
+      { phone, display_name: displayName }
+    );
+  }
+
+  static async verifyRegisterOTP(phone: string, code: string, password: string, displayName: string) {
+    const res = await backendApi.post<LoginResponse>(
+      '/api/v1/auth/phone/register/verify',
+      { phone, code, password, display_name: displayName }
+    );
+    
+    if (res.success && res.data) {
+      const token = res.data.tokens?.access_token;
+      const refresh = res.data.tokens?.refresh_token;
+      if (typeof window !== 'undefined') {
+        Cookies.set('access_token', token, { expires: 1, path: '/' });
+        Cookies.set('refresh_token', refresh, { expires: 7, path: '/' });
+        localStorage.setItem('access_token', token);
+        localStorage.setItem('refresh_token', refresh);
+        if (res.data.user) {
+          localStorage.setItem('auth_user', JSON.stringify(res.data.user));
+        }
+      }
+    }
+    return res;
+  }
+
+  static async sendLoginOTP(phone: string) {
+    return backendApi.post<{ message: string }>(
+      '/api/v1/auth/phone/login/send-otp',
+      { phone }
+    );
+  }
+
+  static async verifyLoginOTP(phone: string, code: string) {
+    const res = await backendApi.post<LoginResponse>(
+      '/api/v1/auth/phone/login/verify',
+      { phone, code }
+    );
+    
+    if (res.success && res.data) {
+      const token = res.data.tokens?.access_token;
+      const refresh = res.data.tokens?.refresh_token;
+      if (typeof window !== 'undefined') {
+        Cookies.set('access_token', token, { expires: 1, path: '/' });
+        Cookies.set('refresh_token', refresh, { expires: 7, path: '/' });
+        localStorage.setItem('access_token', token);
+        localStorage.setItem('refresh_token', refresh);
+        if (res.data.user) {
+          localStorage.setItem('auth_user', JSON.stringify(res.data.user));
+        }
+      }
+    }
+    return res;
+  }
+
+  static async forgotPassword(phone: string) {
+    return backendApi.post<{ message: string }>(
+      '/api/v1/auth/forgot-password',
+      { phone }
+    );
+  }
+
+  static async resetPassword(phone: string, code: string, newPassword: string) {
+    return backendApi.post<{ message: string }>(
+      '/api/v1/auth/reset-password',
+      { phone, code, new_password: newPassword }
+    );
   }
 }
 

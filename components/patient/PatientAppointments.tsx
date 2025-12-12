@@ -17,12 +17,14 @@ import {
   Building2
 } from 'lucide-react';
 
+type TabType = 'pending' | 'confirmed' | 'completed';
+
 export default function PatientAppointments() {
   const { user, isPatient } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled'>('all');
+  const [activeTab, setActiveTab] = useState<TabType>('pending');
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   // Stats
@@ -39,20 +41,18 @@ export default function PatientAppointments() {
       const response = await HospitalService.getPatientAppointments();
       
       if (response.success && response.data) {
-        let filteredData = response.data;
-        
-        // Filter by status
-        if (statusFilter !== 'all') {
-          filteredData = filteredData.filter(apt => apt.status === statusFilter);
-        }
-        
         // Sort by date (newest first)
-        filteredData.sort((a, b) => 
-          new Date(b.appointment_date + ' ' + b.appointment_time).getTime() - 
-          new Date(a.appointment_date + ' ' + a.appointment_time).getTime()
-        );
+        const sortedData = response.data.sort((a, b) => {
+          const dateA = new Date(a.appointment_date);
+          const dateB = new Date(b.appointment_date);
+          const [hourA, minA] = (a.time_slot || '00:00').split(':').map(Number);
+          const [hourB, minB] = (b.time_slot || '00:00').split(':').map(Number);
+          dateA.setHours(hourA, minA);
+          dateB.setHours(hourB, minB);
+          return dateB.getTime() - dateA.getTime();
+        });
         
-        setAppointments(filteredData);
+        setAppointments(sortedData);
         
         // Calculate stats
         const totalAppointments = response.data.length;
@@ -60,7 +60,11 @@ export default function PatientAppointments() {
         today.setHours(0, 0, 0, 0);
         
         const upcomingAppointments = response.data.filter(apt => {
-          const aptDate = new Date(apt.appointment_date + ' ' + apt.appointment_time);
+          const aptDate = new Date(apt.appointment_date);
+          if (apt.time_slot) {
+            const [hour, min] = apt.time_slot.split(':').map(Number);
+            aptDate.setHours(hour, min);
+          }
           return aptDate >= today && apt.status !== 'cancelled' && apt.status !== 'completed';
         });
         
@@ -80,13 +84,21 @@ export default function PatientAppointments() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => {
     if (isPatient()) {
       fetchPatientAppointments();
     }
   }, [isPatient, fetchPatientAppointments]);
+
+  // Filter appointments by active tab
+  const filteredAppointments = appointments.filter(apt => {
+    if (activeTab === 'pending') return apt.status === 'pending';
+    if (activeTab === 'confirmed') return apt.status === 'confirmed';
+    if (activeTab === 'completed') return apt.status === 'completed';
+    return true;
+  });
 
   const handleCancelAppointment = async (appointmentId: string) => {
     if (!confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) return;
@@ -153,8 +165,8 @@ export default function PatientAppointments() {
     }
   };
 
-  const formatDateTime = (dateString: string, timeString: string) => {
-    const date = new Date(dateString + ' ' + timeString);
+  const formatDateTime = (dateString: string, timeSlot?: string) => {
+    const date = new Date(dateString);
     return {
       date: date.toLocaleDateString('vi-VN', {
         weekday: 'long',
@@ -162,15 +174,21 @@ export default function PatientAppointments() {
         month: 'long',
         day: 'numeric'
       }),
-      time: date.toLocaleTimeString('vi-VN', {
-        hour: '2-digit',
-        minute: '2-digit'
+      time: timeSlot || 'Chưa xác định',
+      fullDate: date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
       })
     };
   };
 
   const canCancelAppointment = (appointment: Appointment) => {
-    const appointmentDateTime = new Date(appointment.appointment_date + ' ' + appointment.appointment_time);
+    const appointmentDateTime = new Date(appointment.appointment_date);
+    if (appointment.time_slot) {
+      const [hour, min] = appointment.time_slot.split(':').map(Number);
+      appointmentDateTime.setHours(hour, min);
+    }
     const now = new Date();
     const hoursUntilAppointment = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
     
@@ -279,84 +297,138 @@ export default function PatientAppointments() {
         </div>
       </div>
 
-      {/* Filter and Actions */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex gap-4">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled')}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="pending">Chờ xác nhận</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="completed">Hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-          </div>
-
-          <button
-            onClick={fetchPatientAppointments}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Làm mới
-          </button>
-        </div>
-      </div>
-
-      {/* Appointments List */}
+      {/* Tabs */}
       <div className="bg-white rounded-lg shadow-sm border">
-        <div className="p-6 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">Danh sách lịch hẹn</h3>
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('pending')}
+              className={`
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                ${activeTab === 'pending'
+                  ? 'border-yellow-500 text-yellow-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                <span>Chờ xác nhận</span>
+                <span className="ml-2 bg-yellow-100 text-yellow-600 px-2 py-0.5 rounded-full text-xs font-semibold">
+                  {appointments.filter(a => a.status === 'pending').length}
+                </span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('confirmed')}
+              className={`
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                ${activeTab === 'confirmed'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>Đã xác nhận</span>
+                <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-semibold">
+                  {appointments.filter(a => a.status === 'confirmed').length}
+                </span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('completed')}
+              className={`
+                whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm
+                ${activeTab === 'completed'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }
+              `}
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                <span>Đã khám</span>
+                <span className="ml-2 bg-green-100 text-green-600 px-2 py-0.5 rounded-full text-xs font-semibold">
+                  {appointments.filter(a => a.status === 'completed').length}
+                </span>
+              </div>
+            </button>
+          </nav>
         </div>
 
+        {/* Tab Content */}
         <div className="divide-y divide-gray-200">
           {loading ? (
             <div className="p-6 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-gray-600">Đang tải...</p>
             </div>
-          ) : appointments.length === 0 ? (
+          ) : filteredAppointments.length === 0 ? (
             <div className="p-8 text-center">
               <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có lịch hẹn nào</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {activeTab === 'pending' && 'Chưa có lịch chờ xác nhận'}
+                {activeTab === 'confirmed' && 'Chưa có lịch đã xác nhận'}
+                {activeTab === 'completed' && 'Chưa có lịch đã khám'}
+              </h3>
               <p className="text-gray-600 mb-4">
-                {statusFilter !== 'all' 
-                  ? 'Không có lịch hẹn nào phù hợp với bộ lọc.'
-                  : 'Bạn chưa có lịch hẹn nào. Hãy đặt lịch khám ngay!'
-                }
+                {activeTab === 'pending' && 'Các lịch hẹn mới sẽ xuất hiện ở đây sau khi bạn đặt lịch.'}
+                {activeTab === 'confirmed' && 'Các lịch hẹn đã được bác sĩ xác nhận sẽ xuất hiện ở đây.'}
+                {activeTab === 'completed' && 'Các lịch hẹn đã hoàn thành sẽ xuất hiện ở đây.'}
               </p>
-              <button
-                onClick={() => window.location.href = '/scheduler'}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 mx-auto"
-              >
-                <Plus className="h-5 w-5" />
-                Đặt lịch hẹn đầu tiên
-              </button>
+              {activeTab === 'pending' && (
+                <button
+                  onClick={() => window.location.href = '/scheduler'}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="h-5 w-5" />
+                  Đặt lịch hẹn mới
+                </button>
+              )}
             </div>
           ) : (
-            appointments.map((appointment) => {
-              const { date, time } = formatDateTime(appointment.appointment_date, appointment.appointment_time);
-              const isPast = new Date(appointment.appointment_date + ' ' + appointment.appointment_time) < new Date();
+            filteredAppointments.map((appointment) => {
+              const { date, time, fullDate } = formatDateTime(appointment.appointment_date, appointment.time_slot);
+              const appointmentDateTime = new Date(appointment.appointment_date);
+              if (appointment.time_slot) {
+                const [hour, min] = appointment.time_slot.split(':').map(Number);
+                appointmentDateTime.setHours(hour, min);
+              }
+              const isPast = appointmentDateTime < new Date();
               
               return (
-                <div key={appointment.id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div key={appointment.id} className="p-6 hover:bg-gray-50 transition-colors border-l-4" style={{
+                  borderLeftColor: appointment.status === 'pending' ? '#f59e0b' :
+                                   appointment.status === 'confirmed' ? '#3b82f6' :
+                                   appointment.status === 'completed' ? '#10b981' : '#ef4444'
+                }}>
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-3">
                         {getStatusBadge(appointment.status)}
                         {isPast && appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
                           <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
                             Quá hạn
                           </span>
                         )}
+                        {appointment.urgency === 'urgent' && (
+                          <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full font-medium">
+                            🔴 Khẩn cấp
+                          </span>
+                        )}
                       </div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-1">
-                        {date}
+                      <h4 className="text-lg font-bold text-gray-900 mb-1">
+                        {fullDate}
                       </h4>
-                      <p className="text-blue-600 font-medium">{time}</p>
+                      <div className="flex items-center gap-2 text-blue-600 font-semibold">
+                        <Clock className="h-4 w-4" />
+                        <span>{time}</span>
+                        <span className="text-sm text-gray-500">({appointment.session === 'morning' ? 'Buổi sáng' : 'Buổi chiều'})</span>
+                      </div>
                     </div>
                     
                     <div className="flex gap-2">
@@ -365,7 +437,7 @@ export default function PatientAppointments() {
                         className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50"
                         title="Xem chi tiết"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-5 w-5" />
                       </button>
                       
                       {canCancelAppointment(appointment) && (
@@ -374,41 +446,64 @@ export default function PatientAppointments() {
                           className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50"
                           title="Hủy lịch hẹn"
                         >
-                          <XCircle className="h-4 w-4" />
+                          <XCircle className="h-5 w-5" />
                         </button>
                       )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-4">
                     {appointment.doctor && (
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span>Bác sĩ: {appointment.doctor.display_name}</span>
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span><span className="font-medium">Bác sĩ:</span> {appointment.doctor.display_name}</span>
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <span>Mã bệnh viện: {appointment.hospital_id}</span>
-                    </div>
+                    {appointment.hospital && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">{appointment.hospital.name}</span>
+                      </div>
+                    )}
+
+                    {appointment.patient_name && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <User className="h-4 w-4 text-gray-500" />
+                        <span><span className="font-medium">Bệnh nhân:</span> {appointment.patient_name}</span>
+                      </div>
+                    )}
+
+                    {appointment.patient_phone && (
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="font-medium">SĐT:</span> {appointment.patient_phone}
+                      </div>
+                    )}
                   </div>
 
+                  {appointment.symptoms && (
+                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm font-medium text-yellow-900 mb-1">Triệu chứng:</p>
+                      <p className="text-sm text-yellow-700">{appointment.symptoms}</p>
+                    </div>
+                  )}
+
                   {appointment.notes && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm font-medium text-gray-900 mb-1">Ghi chú:</p>
                       <p className="text-sm text-gray-700">{appointment.notes}</p>
                     </div>
                   )}
                   
-                  {appointment.diagnosis && appointment.status === 'completed' && (
-                    <div className="mt-4 p-3 bg-green-50 rounded-lg">
+                  {appointment.diagnosis_notes && appointment.status === 'completed' && (
+                    <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                       <h5 className="text-sm font-medium text-green-900 mb-1">Chẩn đoán:</h5>
-                      <p className="text-sm text-green-700">{appointment.diagnosis}</p>
+                      <p className="text-sm text-green-700">{appointment.diagnosis_notes}</p>
                     </div>
                   )}
                   
                   {appointment.prescription && appointment.status === 'completed' && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <h5 className="text-sm font-medium text-blue-900 mb-1">Đơn thuốc:</h5>
                       <p className="text-sm text-blue-700">{appointment.prescription}</p>
                     </div>
@@ -445,12 +540,14 @@ export default function PatientAppointments() {
                 <div className="border-l-4 border-blue-500 pl-4">
                   <h4 className="font-semibold text-gray-900 mb-2">Thời gian</h4>
                   <div className="space-y-1 text-sm">
-                    <p><span className="font-medium">Ngày:</span> {formatDateTime(selectedAppointment.appointment_date, selectedAppointment.appointment_time).date}</p>
-                    <p><span className="font-medium">Giờ:</span> {formatDateTime(selectedAppointment.appointment_date, selectedAppointment.appointment_time).time}</p>
-                    <p><span className="font-medium">Khung giờ:</span> {
-                      selectedAppointment.time_slot === 'morning' ? 'Sáng' :
-                      selectedAppointment.time_slot === 'afternoon' ? 'Chiều' : 'Tối'
+                    <p><span className="font-medium">Ngày:</span> {formatDateTime(selectedAppointment.appointment_date, selectedAppointment.time_slot).date}</p>
+                    <p><span className="font-medium">Giờ:</span> {formatDateTime(selectedAppointment.appointment_date, selectedAppointment.time_slot).time}</p>
+                    <p><span className="font-medium">Buổi:</span> {
+                      selectedAppointment.session === 'morning' ? 'Sáng (7:00-11:00)' : 'Chiều (13:00-17:00)'
                     }</p>
+                    {selectedAppointment.appointment_type && (
+                      <p><span className="font-medium">Loại:</span> {selectedAppointment.appointment_type === 'regular' ? 'Khám thường' : 'Khám khẩn'}</p>
+                    )}
                   </div>
                 </div>
 
@@ -471,8 +568,47 @@ export default function PatientAppointments() {
                 {/* Hospital Info */}
                 <div className="border-l-4 border-purple-500 pl-4">
                   <h4 className="font-semibold text-gray-900 mb-2">Bệnh viện</h4>
-                  <p className="text-sm"><span className="font-medium">Mã:</span> {selectedAppointment.hospital_id}</p>
+                  {selectedAppointment.hospital ? (
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-medium">Tên:</span> {selectedAppointment.hospital.name}</p>
+                      <p><span className="font-medium">Địa chỉ:</span> {selectedAppointment.hospital.address}</p>
+                      {selectedAppointment.hospital.phone && (
+                        <p><span className="font-medium">SĐT:</span> {selectedAppointment.hospital.phone}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm"><span className="font-medium">ID:</span> {selectedAppointment.hospital_id}</p>
+                  )}
                 </div>
+
+                {/* Patient Info */}
+                {(selectedAppointment.patient_name || selectedAppointment.patient_phone) && (
+                  <div className="border-l-4 border-indigo-500 pl-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">Thông tin bệnh nhân</h4>
+                    <div className="space-y-1 text-sm">
+                      {selectedAppointment.patient_name && (
+                        <p><span className="font-medium">Họ tên:</span> {selectedAppointment.patient_name}</p>
+                      )}
+                      {selectedAppointment.patient_phone && (
+                        <p><span className="font-medium">SĐT:</span> {selectedAppointment.patient_phone}</p>
+                      )}
+                      {selectedAppointment.patient_age && (
+                        <p><span className="font-medium">Tuổi:</span> {selectedAppointment.patient_age}</p>
+                      )}
+                      {selectedAppointment.patient_gender && (
+                        <p><span className="font-medium">Giới tính:</span> {selectedAppointment.patient_gender === 'male' ? 'Nam' : 'Nữ'}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Symptoms */}
+                {selectedAppointment.symptoms && (
+                  <div className="border-l-4 border-yellow-500 pl-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">Triệu chứng</h4>
+                    <p className="text-sm text-gray-700">{selectedAppointment.symptoms}</p>
+                  </div>
+                )}
 
                 {/* Notes */}
                 {selectedAppointment.notes && (
@@ -485,10 +621,10 @@ export default function PatientAppointments() {
                 {/* Medical Info (for completed appointments) */}
                 {selectedAppointment.status === 'completed' && (
                   <>
-                    {selectedAppointment.diagnosis && (
+                    {selectedAppointment.diagnosis_notes && (
                       <div className="border-l-4 border-red-500 pl-4">
                         <h4 className="font-semibold text-gray-900 mb-2">Chẩn đoán</h4>
-                        <p className="text-sm text-gray-700">{selectedAppointment.diagnosis}</p>
+                        <p className="text-sm text-gray-700">{selectedAppointment.diagnosis_notes}</p>
                       </div>
                     )}
 

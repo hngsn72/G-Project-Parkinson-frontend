@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { HospitalService } from '@/services/hospital.service';
-import type { Hospital, CreateHospitalRequest, HospitalDoctor } from '@/services/hospital.service';
+import type { Hospital, HospitalDoctor } from '@/services/hospital.service';
 import { 
   Plus, 
   Edit, 
@@ -85,7 +85,7 @@ export default function HospitalManagement() {
       if (response.success && response.data) {
         setHospitals(response.data.data);
       }
-    } catch (err) {
+    } catch {
       setError('Không thể tải danh sách bệnh viện');
     } finally {
       setLoading(false);

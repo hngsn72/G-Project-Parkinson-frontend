@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
   // Role and permission helpers
@@ -54,9 +54,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     init();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (identifier: string, password: string) => {
     setLoading(true);
-    const res = await AuthService.login(email, password);
+    const res = await AuthService.login(identifier, password);
     if (res.success && res.data?.user) {
       setUser(res.data.user);
       if (typeof window !== 'undefined') {

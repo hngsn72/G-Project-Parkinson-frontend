@@ -125,7 +125,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/auth/login');
+      router.replace('/signin');
       return;
     }
     

@@ -3,8 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { HospitalService } from '@/services/hospital.service';
 import type { Appointment } from '@/services/hospital.service';
+import { MedicalReportService, type MedicalReport } from '@/services/medical-report.service';
 import { useAuth } from '@/hooks/useAuth';
 import { Modal } from '@/components/ui/Modal';
+import ConfirmModal from '@/components/ui/ConfirmModal';
+import InputModal from '@/components/ui/InputModal';
+import RescheduleModal from '@/components/ui/RescheduleModal';
+import MedicalReportModal from '@/components/doctor/MedicalReportModal';
 import { 
   Calendar, 
   Clock, 
@@ -20,7 +25,8 @@ import {
   MapPin,
   Activity,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Download
 } from 'lucide-react';
 
 export default function DoctorDashboard() {
@@ -28,10 +34,22 @@ export default function DoctorDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pending' | 'confirmed'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'confirmed' | 'completed' | 'result_sent'>('pending');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showMedicalReportModal, setShowMedicalReportModal] = useState(false);
+  const [reportAppointment, setReportAppointment] = useState<Appointment | null>(null);
+  const [existingReport, setExistingReport] = useState<MedicalReport | null>(null);
+  
+  // Modal states
+  const [showConfirmComplete, setShowConfirmComplete] = useState(false);
+  const [appointmentToComplete, setAppointmentToComplete] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [appointmentToReschedule, setAppointmentToReschedule] = useState<Appointment | null>(null);
+  const [viewingReport, setViewingReport] = useState<MedicalReport | null>(null);
   
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -43,6 +61,7 @@ export default function DoctorDashboard() {
   const [stats, setStats] = useState({
     todayAppointments: 0,
     pendingAppointments: 0,
+    completedAppointments: 0,
     thisWeekAppointments: 0,
     totalPatients: 0
   });
@@ -56,6 +75,11 @@ export default function DoctorDashboard() {
         console.log('=== Fetched appointments ===');
         console.log('Total appointments:', response.data.length);
         console.log('Sample appointment:', response.data[0]);
+        console.log('Appointments with medical_result_id:', response.data.filter(apt => apt.medical_result_id).length);
+        console.log('Completed appointments:', response.data.filter(apt => apt.status === 'completed').length);
+        response.data.filter(apt => apt.medical_result_id).forEach(apt => {
+          console.log(`Appointment #${apt.id} has medical_result_id:`, apt.medical_result_id);
+        });
         
         // Set all appointments, let tabs handle filtering
         setAppointments(response.data);
@@ -98,6 +122,7 @@ export default function DoctorDashboard() {
         const today = new Date().toISOString().split('T')[0];
         const todayAppointments = response.data.filter(apt => apt.appointment_date === today);
         const pendingAppointments = response.data.filter(apt => apt.status === 'pending');
+        const completedAppointments = response.data.filter(apt => apt.status === 'completed');
         
         // Calculate this week appointments
         const startOfWeek = new Date();
@@ -116,6 +141,7 @@ export default function DoctorDashboard() {
         setStats({
           todayAppointments: todayAppointments.length,
           pendingAppointments: pendingAppointments.length,
+          completedAppointments: completedAppointments.length,
           thisWeekAppointments: thisWeekAppointments.length,
           totalPatients: uniquePatients.size
         });
@@ -145,12 +171,22 @@ export default function DoctorDashboard() {
     }
   };
 
-  const handleCancelAppointment = async (appointmentId: string, reason?: string) => {
+  const handleCancelAppointment = async (appointmentId: string) => {
+    setAppointmentToCancel(appointmentId);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async (reason: string) => {
+    if (!appointmentToCancel) return;
+    
     try {
       setLoading(true);
-      const response = await HospitalService.cancelAppointment(appointmentId, reason);
+      setShowCancelModal(false);
+      
+      const response = await HospitalService.cancelAppointment(appointmentToCancel, reason);
       
       if (response.success) {
+        setAppointmentToCancel(null);
         await fetchDoctorAppointments();
         await loadStats();
         alert('Hủy lịch hẹn thành công!');
@@ -166,40 +202,46 @@ export default function DoctorDashboard() {
   };
 
   const handleRescheduleAppointment = async (appointmentId: string) => {
-    const newDate = prompt('Nhập ngày mới (YYYY-MM-DD):');
-    const newTime = prompt('Nhập giờ mới (HH:MM):');
-    const reason = prompt('Lý do thay đổi lịch (tùy chọn):');
+    const appointment = appointments.find(apt => apt.id.toString() === appointmentId);
+    if (!appointment) return;
     
-    if (newDate && newTime) {
-      try {
-        setLoading(true);
-        
-        // Determine time slot based on time
-        const hour = parseInt(newTime.split(':')[0]);
-        let timeSlot: 'morning' | 'afternoon' | 'evening' = 'morning';
-        if (hour >= 12 && hour < 18) timeSlot = 'afternoon';
-        else if (hour >= 18) timeSlot = 'evening';
-        
-        const response = await HospitalService.rescheduleAppointment(appointmentId, {
-          new_date: newDate,
-          new_time: newTime,
-          new_time_slot: timeSlot,
-          reason: reason || undefined
-        });
-        
-        if (response.success) {
-          await fetchDoctorAppointments();
-          await loadStats();
-          alert('Thay đổi lịch hẹn thành công!');
-        } else {
-          setError(response.error || 'Không thể thay đổi lịch hẹn');
-        }
-      } catch (error) {
-        console.error('Reschedule appointment error:', error);
-        setError('Có lỗi xảy ra khi thay đổi lịch hẹn');
-      } finally {
-        setLoading(false);
+    setAppointmentToReschedule(appointment);
+    setShowRescheduleModal(true);
+  };
+
+  const confirmReschedule = async (newDate: string, newTime: string, reason: string) => {
+    if (!appointmentToReschedule) return;
+    
+    try {
+      setLoading(true);
+      
+      // Determine time slot based on time
+      const hour = parseInt(newTime.split(':')[0]);
+      let timeSlot: 'morning' | 'afternoon' | 'evening' = 'morning';
+      if (hour >= 12 && hour < 18) timeSlot = 'afternoon';
+      else if (hour >= 18) timeSlot = 'evening';
+      
+      const response = await HospitalService.rescheduleAppointment(appointmentToReschedule.id.toString(), {
+        new_date: newDate,
+        new_time: newTime,
+        new_time_slot: timeSlot,
+        reason: reason || undefined
+      });
+      
+      if (response.success) {
+        setShowRescheduleModal(false);
+        setAppointmentToReschedule(null);
+        await fetchDoctorAppointments();
+        await loadStats();
+        alert('Thay đổi lịch hẹn thành công!');
+      } else {
+        setError(response.error || 'Không thể thay đổi lịch hẹn');
       }
+    } catch (error) {
+      console.error('Reschedule appointment error:', error);
+      setError('Có lỗi xảy ra khi thay đổi lịch hẹn');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -238,25 +280,26 @@ export default function DoctorDashboard() {
     }
   };
 
-  const formatTime = (timeString: string) => {
-    return new Date(`2024-01-01 ${timeString}`).toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleCompleteAppointment = async (appointmentId: string) => {
+    setAppointmentToComplete(appointmentId);
+    setShowConfirmComplete(true);
   };
 
-  const handleCompleteAppointment = async (appointmentId: string) => {
-    if (!confirm('Xác nhận đã hoàn thành lịch khám này?')) return;
+  const confirmComplete = async () => {
+    if (!appointmentToComplete) return;
     
     try {
       setLoading(true);
-      const response = await HospitalService.completeAppointment(appointmentId, {
+      setShowConfirmComplete(false);
+      
+      const response = await HospitalService.completeAppointment(appointmentToComplete, {
         diagnosis_notes: undefined,
         prescription: undefined,
         follow_up_needed: false
       });
       
       if (response.success) {
+        setAppointmentToComplete(null);
         await fetchDoctorAppointments();
         await loadStats();
         alert('Đã hoàn thành lịch hẹn!');
@@ -364,12 +407,25 @@ export default function DoctorDashboard() {
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Tổng bệnh nhân</p>
-              <p className="text-3xl font-bold text-purple-600">{stats.totalPatients}</p>
-              <p className="text-sm text-gray-500">Đã khám</p>
+              <p className="text-sm text-gray-600 mb-1">Đã khám</p>
+              <p className="text-3xl font-bold text-purple-600">{appointments.filter(apt => apt.status === 'completed' && !apt.medical_result_id).length}</p>
+              <p className="text-sm text-gray-500">Chờ trả kết quả</p>
             </div>
             <div className="p-3 bg-purple-100 rounded-lg">
-              <User className="h-6 w-6 text-purple-600" />
+              <CheckCircle className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Đã trả kết quả</p>
+              <p className="text-3xl font-bold text-blue-600">{appointments.filter(apt => apt.status === 'completed' && apt.medical_result_id).length}</p>
+              <p className="text-sm text-gray-500">Lịch hẹn</p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <FileText className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -430,6 +486,26 @@ export default function DoctorDashboard() {
             >
               Đã xác nhận ({appointments.filter(apt => apt.status === 'confirmed').length})
             </button>
+            <button
+              onClick={() => setActiveTab('completed')}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'completed'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Đã khám ({appointments.filter(apt => apt.status === 'completed' && !apt.medical_result_id).length})
+            </button>
+            <button
+              onClick={() => setActiveTab('result_sent')}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                activeTab === 'result_sent'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Đã trả kết quả ({appointments.filter(apt => apt.status === 'completed' && apt.medical_result_id).length})
+            </button>
           </div>
         </div>
 
@@ -440,16 +516,34 @@ export default function DoctorDashboard() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-gray-600">Đang tải...</p>
             </div>
-          ) : appointments.filter(apt => apt.status === activeTab).length === 0 ? (
+          ) : appointments.filter(apt => {
+              if (activeTab === 'result_sent') {
+                return apt.status === 'completed' && apt.medical_result_id;
+              } else if (activeTab === 'completed') {
+                return apt.status === 'completed' && !apt.medical_result_id;
+              }
+              return apt.status === activeTab;
+            }).length === 0 ? (
             <div className="p-6 text-center">
               <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {activeTab === 'pending' ? 'Không có lịch hẹn chờ xác nhận' : 'Không có lịch hẹn đã xác nhận'}
+                {activeTab === 'pending' 
+                  ? 'Không có lịch hẹn chờ xác nhận' 
+                  : activeTab === 'confirmed'
+                  ? 'Không có lịch hẹn đã xác nhận'
+                  : activeTab === 'completed'
+                  ? 'Không có lịch khám chờ trả kết quả'
+                  : 'Không có lịch khám đã trả kết quả'
+                }
               </h3>
               <p className="text-gray-600">
                 {activeTab === 'pending' 
                   ? 'Không có lịch hẹn chờ xác nhận nào'
-                  : 'Không có lịch hẹn đã xác nhận nào'
+                  : activeTab === 'confirmed'
+                  ? 'Không có lịch hẹn đã xác nhận nào'
+                  : activeTab === 'completed'
+                  ? 'Không có lịch khám chờ trả kết quả nào'
+                  : 'Không có lịch khám đã trả kết quả nào'
                 }
               </p>
             </div>
@@ -482,8 +576,38 @@ export default function DoctorDashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {appointments.filter(apt => apt.status === activeTab).map((appointment) => (
-                    <tr key={appointment.id} className="hover:bg-gray-50 transition-colors">
+                  {appointments.filter(apt => {
+                    if (activeTab === 'result_sent') {
+                      return apt.status === 'completed' && apt.medical_result_id;
+                    } else if (activeTab === 'completed') {
+                      return apt.status === 'completed' && !apt.medical_result_id;
+                    }
+                    return apt.status === activeTab;
+                  }).map((appointment) => (
+                    <tr 
+                      key={appointment.id} 
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedAppointment(appointment);
+                        if (appointment.medical_result_id) {
+                          // Load medical report if exists
+                          MedicalReportService.getReportById(appointment.medical_result_id)
+                            .then(response => {
+                              if (response.success && response.data) {
+                                setViewingReport(response.data);
+                              }
+                              setShowDetailModal(true);
+                            })
+                            .catch(() => {
+                              setViewingReport(null);
+                              setShowDetailModal(true);
+                            });
+                        } else {
+                          setViewingReport(null);
+                          setShowDetailModal(true);
+                        }
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <CalendarDays className="h-4 w-4 text-gray-400 mr-2" />
@@ -497,7 +621,7 @@ export default function DoctorDashboard() {
                             </div>
                             <div className="text-sm text-gray-500 flex items-center">
                               <Clock className="h-3 w-3 mr-1" />
-                              {appointment.time_slot || formatTime(appointment.appointment_time)}
+                              {appointment.time_slot || 'Chưa xác định'}
                             </div>
                           </div>
                         </div>
@@ -551,17 +675,7 @@ export default function DoctorDashboard() {
                         {getStatusBadge(appointment.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedAppointment(appointment);
-                              setShowDetailModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50"
-                            title="Xem chi tiết"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           
                           {appointment.status === 'pending' && (
                             <>
@@ -582,12 +696,7 @@ export default function DoctorDashboard() {
                               </button>
                               
                               <button
-                                onClick={() => {
-                                  const reason = prompt('Lý do hủy lịch hẹn (tùy chọn):');
-                                  if (reason !== null) {
-                                    handleCancelAppointment(appointment.id.toString(), reason);
-                                  }
-                                }}
+                                onClick={() => handleCancelAppointment(appointment.id.toString())}
                                 className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50"
                                 title="Hủy lịch hẹn"
                               >
@@ -603,6 +712,44 @@ export default function DoctorDashboard() {
                               title="Hoàn thành khám"
                             >
                               <CheckCircle className="h-4 w-4" />
+                            </button>
+                          )}
+                          
+                          {appointment.status === 'completed' && !appointment.medical_result_id && (
+                            <button
+                              onClick={() => {
+                                setReportAppointment(appointment);
+                                setExistingReport(null);
+                                setShowMedicalReportModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50"
+                              title="Trả kết quả"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </button>
+                          )}
+                          
+                          {appointment.status === 'completed' && appointment.medical_result_id && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await MedicalReportService.getReportById(appointment.medical_result_id!);
+                                  if (response.success && response.data) {
+                                    setViewingReport(response.data);
+                                    setSelectedAppointment(appointment);
+                                    setShowDetailModal(true);
+                                  } else {
+                                    alert('Không thể tải kết quả khám: ' + (response.error || 'Lỗi không xác định'));
+                                  }
+                                } catch (error) {
+                                  console.error('Load report error:', error);
+                                  alert('Không thể tải kết quả khám');
+                                }
+                              }}
+                              className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50"
+                              title="Xem kết quả khám"
+                            >
+                              <Eye className="h-4 w-4" />
                             </button>
                           )}
                         </div>
@@ -801,7 +948,7 @@ export default function DoctorDashboard() {
                     </div>
                     <div>
                       <div className="font-bold text-lg text-gray-900">
-                        {appointment.time_slot || formatTime(appointment.appointment_time)}
+                        {appointment.time_slot || 'Chưa xác định'}
                       </div>
                       <div className="text-sm text-gray-500">
                         {appointment.session === 'morning' ? '🌅 Buổi sáng' : '🌆 Buổi chiều'}
@@ -859,11 +1006,8 @@ export default function DoctorDashboard() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          const reason = prompt('Lý do hủy:');
-                          if (reason !== null) {
-                            handleCancelAppointment(appointment.id.toString(), reason);
-                            setShowDayModal(false);
-                          }
+                          setShowDayModal(false);
+                          handleCancelAppointment(appointment.id.toString());
                         }}
                         className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium"
                       >
@@ -928,7 +1072,7 @@ export default function DoctorDashboard() {
                   <div className="flex items-center gap-2 mt-1">
                     <Clock className="h-4 w-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-600">
-                      {selectedAppointment.time_slot || formatTime(selectedAppointment.appointment_time)}
+                      {selectedAppointment.time_slot || 'Chưa xác định'}
                     </span>
                     {selectedAppointment.session && (
                       <span className={`ml-2 px-2 py-1 text-xs font-medium rounded-full ${
@@ -1021,6 +1165,164 @@ export default function DoctorDashboard() {
               </div>
             )}
 
+            {/* Medical Report Results - Show if exists */}
+            {viewingReport && (
+              <div className="border-l-4 border-purple-500 bg-purple-50 p-4 rounded">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-purple-600" />
+                    <h4 className="font-semibold text-gray-900 text-lg">Kết quả khám bệnh</h4>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setExistingReport(viewingReport);
+                      setReportAppointment(selectedAppointment);
+                      setShowMedicalReportModal(true);
+                      setShowDetailModal(false);
+                    }}
+                    className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-1 text-sm"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Sửa kết quả
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Diagnosis */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 uppercase">Chẩn đoán</label>
+                      <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                        <p className="text-gray-900">{viewingReport.diagnosis || 'Chưa có'}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 uppercase">Mã bệnh (ICD-10)</label>
+                      <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                        <p className="text-gray-900">{viewingReport.diagnosis_code || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chief Complaint */}
+                  {viewingReport.chief_complaint && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 uppercase">Lý do khám</label>
+                      <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                        <p className="text-gray-900">{viewingReport.chief_complaint}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Clinical Findings */}
+                  {viewingReport.clinical_findings && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 uppercase">Triệu chứng lâm sàng</label>
+                      <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                        <p className="text-gray-900 whitespace-pre-wrap">{viewingReport.clinical_findings}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lab & Imaging Results */}
+                  {(viewingReport.lab_results || viewingReport.imaging_results) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {viewingReport.lab_results && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 uppercase">Kết quả xét nghiệm</label>
+                          <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                            <p className="text-gray-900 whitespace-pre-wrap">{viewingReport.lab_results}</p>
+                          </div>
+                        </div>
+                      )}
+                      {viewingReport.imaging_results && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 uppercase">Kết quả hình ảnh</label>
+                          <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                            <p className="text-gray-900 whitespace-pre-wrap">{viewingReport.imaging_results}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Treatment */}
+                  {(viewingReport.prescription || viewingReport.treatment_plan) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {viewingReport.prescription && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 uppercase">Đơn thuốc</label>
+                          <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                            <p className="text-gray-900 whitespace-pre-wrap">{viewingReport.prescription}</p>
+                          </div>
+                        </div>
+                      )}
+                      {viewingReport.treatment_plan && (
+                        <div>
+                          <label className="text-xs font-medium text-gray-600 uppercase">Phương án điều trị</label>
+                          <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                            <p className="text-gray-900 whitespace-pre-wrap">{viewingReport.treatment_plan}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {viewingReport.recommendations && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 uppercase">Lời khuyên</label>
+                      <div className="mt-1 bg-white p-3 rounded border border-purple-200">
+                        <p className="text-gray-900 whitespace-pre-wrap">{viewingReport.recommendations}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Follow-up */}
+                  {viewingReport.follow_up_required && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <h5 className="font-semibold text-blue-900 mb-2 text-sm">Tái khám</h5>
+                      {viewingReport.follow_up_date && (
+                        <p className="text-blue-800 text-sm mb-1">
+                          <Calendar className="h-4 w-4 inline mr-2" />
+                          Ngày tái khám: {new Date(viewingReport.follow_up_date).toLocaleDateString('vi-VN')}
+                        </p>
+                      )}
+                      {viewingReport.follow_up_notes && (
+                        <p className="text-blue-800 text-sm">{viewingReport.follow_up_notes}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* PDF Attachment */}
+                  {viewingReport.pdf_file_name && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-gray-600" />
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">{viewingReport.pdf_file_name}</p>
+                            {viewingReport.pdf_file_size !== undefined && (
+                              <p className="text-xs text-gray-600">
+                                {(viewingReport.pdf_file_size / 1024).toFixed(2)} KB
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => MedicalReportService.downloadPDF(viewingReport.id)}
+                          className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-1 text-sm"
+                        >
+                          <Download className="h-4 w-4" />
+                          Tải xuống
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Action buttons */}
             {selectedAppointment.status === 'pending' && (
               <div className="flex gap-3 pt-4 border-t">
@@ -1046,11 +1348,8 @@ export default function DoctorDashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    const reason = prompt('Lý do hủy lịch hẹn (tùy chọn):');
-                    if (reason !== null) {
-                      handleCancelAppointment(selectedAppointment.id.toString(), reason);
-                      setShowDetailModal(false);
-                    }
+                    setShowDetailModal(false);
+                    handleCancelAppointment(selectedAppointment.id.toString());
                   }}
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
                 >
@@ -1059,9 +1358,55 @@ export default function DoctorDashboard() {
                 </button>
               </div>
             )}
+
+            {/* Completed appointment - Create medical report */}
+            {selectedAppointment.status === 'completed' && !selectedAppointment.medical_result_id && (
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setReportAppointment(selectedAppointment);
+                    setShowMedicalReportModal(true);
+                    setShowDetailModal(false);
+                  }}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-colors"
+                >
+                  <FileText className="h-5 w-5" />
+                  Tạo kết quả khám
+                </button>
+              </div>
+            )}
+
+            {selectedAppointment.status === 'completed' && selectedAppointment.medical_result_id && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center text-green-700">
+                  <CheckCircle className="h-5 w-5 mr-2" />
+                  <span className="font-medium">Đã tạo kết quả khám cho bệnh nhân này</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Modal>
+
+      {/* Medical Report Modal */}
+      {showMedicalReportModal && reportAppointment && (
+        <MedicalReportModal
+          appointment={reportAppointment}
+          existingReport={existingReport}
+          onClose={() => {
+            setShowMedicalReportModal(false);
+            setReportAppointment(null);
+            setExistingReport(null);
+          }}
+          onSuccess={() => {
+            setShowMedicalReportModal(false);
+            setReportAppointment(null);
+            setExistingReport(null);
+            fetchDoctorAppointments();
+            loadStats();
+          }}
+        />
+      )}
 
       {/* Error Message */}
       {error && (
@@ -1077,6 +1422,52 @@ export default function DoctorDashboard() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Confirm Complete Modal */}
+      <ConfirmModal
+        isOpen={showConfirmComplete}
+        title="Xác nhận hoàn thành"
+        message="Xác nhận đã hoàn thành lịch khám này?"
+        confirmText="Hoàn thành"
+        cancelText="Hủy"
+        onConfirm={confirmComplete}
+        onCancel={() => {
+          setShowConfirmComplete(false);
+          setAppointmentToComplete(null);
+        }}
+        variant="success"
+      />
+
+      {/* Cancel Appointment Modal */}
+      <InputModal
+        isOpen={showCancelModal}
+        title="Hủy lịch hẹn"
+        label="Lý do hủy (tùy chọn)"
+        placeholder="Nhập lý do hủy lịch hẹn..."
+        type="textarea"
+        confirmText="Xác nhận hủy"
+        cancelText="Đóng"
+        onConfirm={confirmCancel}
+        onCancel={() => {
+          setShowCancelModal(false);
+          setAppointmentToCancel(null);
+        }}
+        required={false}
+      />
+
+      {/* Reschedule Modal */}
+      {appointmentToReschedule && (
+        <RescheduleModal
+          isOpen={showRescheduleModal}
+          currentDate={appointmentToReschedule.appointment_date.split('T')[0]}
+          currentTime={new Date(appointmentToReschedule.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+          onConfirm={confirmReschedule}
+          onCancel={() => {
+            setShowRescheduleModal(false);
+            setAppointmentToReschedule(null);
+          }}
+        />
       )}
     </div>
   );

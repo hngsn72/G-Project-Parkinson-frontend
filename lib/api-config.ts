@@ -306,10 +306,17 @@ export interface DiagnosisHistory {
   risk_level?: 'low' | 'moderate' | 'high';
   diagnosis?: string;
   probability?: number;
+  status?: string;
   features?: EnhancedVoiceFeatures;
+  critical_features?: {
+    jitter_local?: number;
+    shimmer_local?: number;
+    hnr?: number;
+  };
   recommendations?: string[];
   model_info?: {
     name: string;
+    version?: string;
     accuracy: number;
     features: number;
   };
@@ -521,6 +528,7 @@ export interface HospitalDoctor {
   hospital_id: number;
   doctor_id: string;
   department?: string;
+  specialization?: string;
   position?: string;
   is_primary: boolean;
   consultation_fee?: number;
@@ -547,41 +555,78 @@ export interface HospitalDoctor {
 }
 
 export interface Appointment {
-  id: string;
+  id: number;
   patient_id: string;
   doctor_id: string;
-  hospital_id: string;
-  appointment_date: string;
-  appointment_time: string;
-  time_slot?: string; // Can be specific time like "07:00" or period like "morning"
-  session?: 'morning' | 'afternoon'; // Session period
-  status: 'pending' | 'scheduled' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
-  reason?: string;
-  notes?: string;
-  symptoms?: string;
-  diagnosis?: string;
-  prescription?: string;
-  follow_up_date?: string;
-  // Patient demographics (optional, may be provided when creating appointment)
-  patient_name?: string;
-  patient_phone?: string;
+  hospital_id: number;
+  appointment_date: string; // ISO date format
+  time_slot: string; // Time in HH:mm format (e.g., "08:30")
+  session: 'morning' | 'afternoon'; // Session period
+  appointment_type: 'regular' | 'urgent';
+  patient_profile_id?: number;
+  // Patient demographics
+  patient_name: string;
+  patient_phone: string;
+  patient_email?: string;
   patient_age?: number;
   patient_gender?: 'male' | 'female';
+  // Appointment details
+  symptoms?: string;
+  notes?: string;
+  urgency: 'normal' | 'urgent';
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'rejected';
+  // Confirmation
+  confirmed_at?: string;
+  confirmed_by?: string;
+  rejected_at?: string;
+  rejected_by?: string;
+  rejection_reason?: string;
+  // Rescheduling
+  original_date?: string;
+  original_time_slot?: string;
+  reschedule_reason?: string;
+  reschedule_count: number;
+  // Cancellation
+  cancelled_at?: string;
+  cancelled_by?: string;
+  cancellation_reason?: string;
+  // Completion
+  completed_at?: string;
+  diagnosis_notes?: string;
+  prescription?: string;
+  medical_result_id?: number;
+  // Follow-up
+  follow_up_needed: boolean;
+  follow_up_date?: string;
+  next_appointment_id?: number;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
+  // Relations
   patient?: {
-    id: string;
+    id: number;
     user_id: string;
-    display_name: string;
     email: string;
-    phone?: string;
+    phone: string;
+    display_name: string;
+    role: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    deleted_at?: string;
   };
   doctor?: {
-    id: string;
+    id: number;
     user_id: string;
-    display_name: string;
     email: string;
-    specialization?: string;
+    phone: string;
+    display_name: string;
+    role: string;
+    status: string;
+    last_login_at?: string;
+    created_at: string;
+    updated_at: string;
+    deleted_at?: string;
   };
   hospital?: Hospital;
 }
@@ -606,7 +651,7 @@ export type UpdateHospitalRequest = Partial<CreateHospitalRequest>;
 
 export interface CreateHospitalDoctorRequest {
   doctor_id: string;
-  specialization: string;
+  specialization?: string;
   available_days?: string[];
   morning_hours?: string;
   afternoon_hours?: string;

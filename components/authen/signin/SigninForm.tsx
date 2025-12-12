@@ -9,7 +9,7 @@ import Link from "next/link";
 export default function SigninForm() {
   const router = useRouter();
   const pathname = usePathname();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export default function SigninForm() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); setLoading(true);
-    const res = await AuthService.login(email, password);
+    const res = await AuthService.login(identifier, password);
       setLoading(false);
     if (!res.success) { setError(res.error || 'Đăng nhập thất bại'); return; }
     router.push("/dashboard");
@@ -42,7 +42,7 @@ export default function SigninForm() {
         {error && <div className="text-sm text-red-600 mb-2 text-center">{error}</div>}
         <div>
           <label className="block text-sm font-medium mb-1">Email</label>
-          <input value={email} onChange={e=>setEmail(e.target.value)} type="email" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none" required/>
+          <input value={identifier} onChange={e=>setIdentifier(e.target.value)} type="text" className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:outline-none" placeholder="email@example.com hoặc 0123456789" required/>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Mật khẩu</label>

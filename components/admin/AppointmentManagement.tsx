@@ -304,7 +304,7 @@ export default function AppointmentManagement() {
                 
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  <span>{formatTime(appointment.appointment_time)}</span>
+                  <span>{appointment.time_slot || 'Chưa xác định'}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -384,7 +384,7 @@ export default function AppointmentManagement() {
                     </div>
                     <div>
                       <span className="text-gray-600">Giờ hẹn:</span>
-                      <p className="font-medium">{formatTime(selectedAppointment.appointment_time)}</p>
+                      <p className="font-medium">{selectedAppointment.time_slot || 'Chưa xác định'}</p>
                     </div>
                     <div>
                       <span className="text-gray-600">Khung giờ:</span>
